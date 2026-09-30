@@ -1,25 +1,17 @@
 import * as React from 'react'
 import classNames from 'classnames'
 import {
+  getTeamLinks,
   ITeamLink,
-  TeamLinkIcon,
-  teamLinks,
+  onTeamLinksChanged,
   teamName,
 } from '../../lib/team-links'
+import { Disposable } from 'event-kit'
+import { teamLinkIcons } from './team-link-icons'
 import { IntegratedTerminal } from './integrated-terminal'
 import { Button } from '../lib/button'
-import { Octicon, OcticonSymbol } from '../octicons'
+import { Octicon } from '../octicons'
 import * as octicons from '../octicons/octicons.generated'
-
-const teamLinkIcons: Record<TeamLinkIcon, OcticonSymbol> = {
-  folder: octicons.fileDirectory,
-  build: octicons.archive,
-  calendar: octicons.calendar,
-  repo: octicons.repo,
-  document: octicons.book,
-  docs: octicons.note,
-  chat: octicons.commentDiscussion,
-}
 
 interface ITeamBarProps {
   /**
@@ -49,6 +41,9 @@ interface ITeamBarState {
   readonly sessionCwd: string | null
 
   readonly terminalHeight: number
+
+  /** The links shown in the bar, editable in the settings */
+  readonly links: ReadonlyArray<ITeamLink>
 }
 
 const terminalHeightKey = 'team-bar-terminal-height'
@@ -87,7 +82,7 @@ class TeamLinkButton extends React.Component<ITeamLinkButtonProps> {
       <Button
         className="team-bar-button team-link"
         onClick={this.onClick}
-        tooltip={`${link.description}\n${link.url}`}
+        tooltip={`${link.description ?? link.label}\n${link.url}`}
       >
         <Octicon className="team-link-icon" symbol={teamLinkIcons[link.icon]} />
         {link.label}
@@ -104,6 +99,7 @@ class TeamLinkButton extends React.Component<ITeamLinkButtonProps> {
 export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
   private readonly terminalRef = React.createRef<IntegratedTerminal>()
   private dragStart: { y: number; height: number } | null = null
+  private linksSubscription: Disposable | null = null
 
   public constructor(props: ITeamBarProps) {
     super(props)
@@ -113,14 +109,19 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
       sessionKey: 0,
       sessionCwd: props.terminalCwd,
       terminalHeight: loadTerminalHeight(),
+      links: getTeamLinks(),
     }
   }
 
   public componentDidMount() {
     window.addEventListener('keydown', this.onKeyDown)
+    this.linksSubscription = onTeamLinksChanged(links =>
+      this.setState({ links })
+    )
   }
 
   public componentWillUnmount() {
+    this.linksSubscription?.dispose()
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('mousemove', this.onDragMove)
     window.removeEventListener('mouseup', this.onDragEnd)
@@ -247,9 +248,9 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
     )
   }
 
-  private renderLink = (link: ITeamLink) => (
+  private renderLink = (link: ITeamLink, index: number) => (
     <TeamLinkButton
-      key={link.url}
+      key={`${index}-${link.url}`}
       link={link}
       onOpenURL={this.props.onOpenURL}
     />
@@ -263,7 +264,9 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
         {this.renderTerminalPanel()}
         <div id="team-bar" role="toolbar" aria-label="チームリンク">
           <span className="team-badge">{teamName}</span>
-          <nav className="team-links">{teamLinks.map(this.renderLink)}</nav>
+          <nav className="team-links">
+            {this.state.links.map(this.renderLink)}
+          </nav>
           <span className="team-bar-spacer" />
           <Button
             className={classNames('team-bar-button', 'team-terminal-toggle', {

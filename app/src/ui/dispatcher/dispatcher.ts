@@ -2494,6 +2494,24 @@ export class Dispatcher {
   /**
    * Show the current pull request on github.com
    */
+  /**
+   * Create a pull request for the current branch using the API. Rejects with
+   * an error describing the problem if it couldn't be created.
+   */
+  public createPullRequestInApp(
+    repository: Repository,
+    baseBranch: Branch,
+    title: string,
+    body: string
+  ) {
+    return this.appStore._createPullRequestInApp(
+      repository,
+      baseBranch,
+      title,
+      body
+    )
+  }
+
   public showPullRequest(repository: Repository): Promise<void> {
     return this.appStore._showPullRequest(repository)
   }

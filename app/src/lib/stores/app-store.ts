@@ -8602,7 +8602,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
 
   public async _showPullRequest(repository: Repository): Promise<void> {
     // no pull requests from non github repos
-    if (repository.gitHubRepository === null) {
+    if (!isRepositoryWithGitHubRepository(repository)) {
       return
     }
 
@@ -8613,7 +8613,83 @@ export class AppStore extends TypedBaseStore<IAppState> {
       return
     }
 
-    return this._showPullRequestByPR(currentPullRequest)
+    // Review, merge or close the pull request in the app when we can talk to
+    // the API, otherwise fall back to the browser.
+    if (getAccountForRepository(this.accounts, repository) === null) {
+      return this._showPullRequestByPR(currentPullRequest)
+    }
+
+    const base = currentPullRequest.base.gitHubRepository
+    return this._showPopup({
+      type: PopupType.PullRequestDetails,
+      repository,
+      owner: base.owner.login,
+      name: base.name,
+      pullRequestNumber: currentPullRequest.pullRequestNumber,
+    })
+  }
+
+  /**
+   * Create a pull request for the current branch using the API.
+   *
+   * @returns where the pull request was created
+   */
+  public async _createPullRequestInApp(
+    repository: Repository,
+    baseBranch: Branch,
+    title: string,
+    body: string
+  ): Promise<{ owner: string; name: string; pullRequestNumber: number }> {
+    const { gitHubRepository } = repository
+    if (gitHubRepository === null) {
+      throw new Error(
+        'このリポジトリはホスティングサービスに接続されていません。'
+      )
+    }
+
+    const account = getAccountForRepository(this.accounts, repository)
+    if (account === null) {
+      throw new Error(
+        'このリポジトリのアカウントが見つかりません。設定 > Accounts から追加してください。'
+      )
+    }
+
+    const { tip } = this.repositoryStateCache.get(repository).branchesState
+    if (tip.kind !== TipState.Valid) {
+      throw new Error('ブランチがチェックアウトされていません。')
+    }
+
+    const { branch } = tip
+    if (branch.upstreamWithoutRemote === null) {
+      throw new Error(
+        'このブランチはまだプッシュされていません。先にプッシュしてください。'
+      )
+    }
+
+    // Contributions from a fork are opened against the parent repository
+    const isFork = isForkedRepositoryContributingToParent(repository)
+    const target =
+      isFork && gitHubRepository.parent !== null
+        ? gitHubRepository.parent
+        : gitHubRepository
+    const head = isFork
+      ? `${gitHubRepository.owner.login}:${branch.upstreamWithoutRemote}`
+      : branch.upstreamWithoutRemote
+
+    const pr = await API.fromAccount(account).createPullRequest(
+      target.owner.login,
+      target.name,
+      { title, body, head, base: baseBranch.nameWithoutRemote }
+    )
+
+    this.statsStore.increment('createPullRequestCount')
+    await this._refreshPullRequests(repository)
+
+    return {
+      owner: target.owner.login,
+      name: target.name,
+      pullRequestNumber: pr.number,
+    }
   }
 
   public async _showPullRequestByPR(pr: PullRequest): Promise<void> {

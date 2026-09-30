@@ -1,4 +1,12 @@
 import * as React from 'react'
+import {
+  defaultTeamLinks,
+  getTeamLinks,
+  ITeamLink,
+  isValidTeamLinkURL,
+  setTeamLinks,
+} from '../../lib/team-links'
+import { TeamLinksPreferences } from './team-links'
 import { Account, isDotComAccount } from '../../models/account'
 import { PreferencesTab } from '../../models/preferences'
 import { Dispatcher } from '../dispatcher'
@@ -131,6 +139,10 @@ interface IPreferencesProps {
 
 interface IPreferencesState {
   readonly selectedIndex: PreferencesTab
+  /** The links shown in the team bar, saved with the other settings */
+  readonly teamLinks: ReadonlyArray<ITeamLink>
+  /** Whether the links should be reset to the team's defaults on save */
+  readonly resetTeamLinks: boolean
   readonly committerName: string
   readonly committerEmail: string
   readonly defaultBranch: string
@@ -220,6 +232,8 @@ export class Preferences extends React.Component<
 
     this.state = {
       selectedIndex: this.props.initialSelectedTab || PreferencesTab.Accounts,
+      teamLinks: getTeamLinks(),
+      resetTeamLinks: false,
       committerName: '',
       committerEmail: '',
       defaultBranch: '',
@@ -435,6 +449,10 @@ export class Preferences extends React.Component<
               <Octicon className="icon" symbol={octicons.accessibility} />
               Accessibility
             </span>
+            <span id={this.getTabId(PreferencesTab.Links)}>
+              <Octicon className="icon" symbol={octicons.link} />
+              Links
+            </span>
           </TabBar>
 
           {this.renderActiveTab()}
@@ -473,6 +491,9 @@ export class Preferences extends React.Component<
         break
       case PreferencesTab.Accessibility:
         suffix = 'accessibility'
+        break
+      case PreferencesTab.Links:
+        suffix = 'links'
         break
       default:
         return assertNever(tab, `Unknown tab type: ${tab}`)
@@ -767,6 +788,15 @@ export class Preferences extends React.Component<
             showDiffCheckMarks={this.state.showDiffCheckMarks}
             onShowDiffCheckMarksChanged={this.onShowDiffCheckMarksChanged}
             onUnderlineLinksChanged={this.onUnderlineLinksChanged}
+          />
+        )
+        break
+      case PreferencesTab.Links:
+        View = (
+          <TeamLinksPreferences
+            links={this.state.teamLinks}
+            onLinksChanged={this.onTeamLinksChanged}
+            onResetLinks={this.onResetTeamLinks}
           />
         )
         break
@@ -1109,6 +1139,7 @@ export class Preferences extends React.Component<
       return
     }
 
+    this.saveTeamLinks()
     dispatcher.setUseWindowsOpenSSH(this.state.useWindowsOpenSSH)
     dispatcher.setShowCommitLengthWarning(this.state.showCommitLengthWarning)
     dispatcher.setNotificationsEnabled(this.state.notificationsEnabled)
@@ -1219,6 +1250,33 @@ export class Preferences extends React.Component<
     }
 
     this.props.onDismissed()
+  }
+
+  private onTeamLinksChanged = (teamLinks: ReadonlyArray<ITeamLink>) => {
+    this.setState({ teamLinks, resetTeamLinks: false })
+  }
+
+  private onResetTeamLinks = () => {
+    this.setState({ teamLinks: defaultTeamLinks, resetTeamLinks: true })
+  }
+
+  private saveTeamLinks() {
+    const { teamLinks, resetTeamLinks } = this.state
+    if (resetTeamLinks) {
+      setTeamLinks(null)
+      return
+    }
+
+    // Drop incomplete links rather than showing broken buttons
+    setTeamLinks(
+      teamLinks
+        .map(link => ({
+          ...link,
+          label: link.label.trim(),
+          url: link.url.trim(),
+        }))
+        .filter(link => link.label.length > 0 && isValidTeamLinkURL(link.url))
+    )
   }
 
   private onTabClicked = (visualIndex: number) => {

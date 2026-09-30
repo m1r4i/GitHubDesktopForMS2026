@@ -230,6 +230,7 @@ import { DeleteWorktreeFailedDialog } from './worktrees/delete-worktree-failed-d
 import { WorktreeEntry } from '../models/worktree'
 import { shouldShowWorktreeDropdown } from '../lib/worktree-dropdown'
 import { TeamBar } from './team-bar/team-bar'
+import { PullRequestDetailsDialog } from './pull-request-details/pull-request-details-dialog'
 import { isGiteaEndpoint } from '../lib/gitea'
 
 const MinuteInMilliseconds = 1000 * 60
@@ -2613,6 +2614,23 @@ export class App extends React.Component<IAppProps, IAppState> {
           />
         )
       }
+      case PopupType.PullRequestDetails: {
+        return (
+          <PullRequestDetailsDialog
+            key="pull-request-details"
+            dispatcher={this.props.dispatcher}
+            repository={popup.repository}
+            account={getAccountForRepository(
+              this.state.accounts,
+              popup.repository
+            )}
+            owner={popup.owner}
+            name={popup.name}
+            pullRequestNumber={popup.pullRequestNumber}
+            onDismissed={onPopupDismissedFn}
+          />
+        )
+      }
       case PopupType.CICheckRunRerun: {
         return (
           <CICheckRunRerunDialog
@@ -3742,8 +3760,8 @@ export class App extends React.Component<IAppProps, IAppState> {
     const dispatcher = this.props.dispatcher
 
     if (currentPullRequest == null) {
-      dispatcher.createPullRequest(state.repository)
-      dispatcher.incrementMetric('createPullRequestCount')
+      // Create pull requests in the app, starting from the preview
+      dispatcher.startPullRequest(state.repository)
     } else {
       dispatcher.showPullRequest(state.repository)
     }

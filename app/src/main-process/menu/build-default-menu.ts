@@ -54,9 +54,10 @@ export function buildDefaultMenuTemplate({
   hostingServiceName = 'GitHub',
 }: MenuLabelsEvent): Electron.MenuItemConstructorOptions[] {
   const host = hostingServiceName
+  // Pull requests are shown in the app, see PullRequestDetailsDialog
   const showPullRequestLabel = __DARWIN__
-    ? `View Pull Request on ${host}`
-    : `View &pull request on ${host}`
+    ? 'View Pull Request'
+    : 'View &pull request'
 
   contributionTargetDefaultBranch = truncateWithEllipsis(
     contributionTargetDefaultBranch,
