@@ -10,8 +10,13 @@ export function getCompanyName() {
   return companyName
 }
 
+/**
+ * The version of the app. `yarn build:team` sets DESKTOP_VERSION_OVERRIDE to
+ * give every team build a higher version than the previous one, which lets
+ * installers update an existing installation in place.
+ */
 export function getVersion() {
-  return version
+  return process.env.DESKTOP_VERSION_OVERRIDE || version
 }
 
 export function getBundleID() {
