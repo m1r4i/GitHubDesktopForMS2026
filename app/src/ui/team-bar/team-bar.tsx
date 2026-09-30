@@ -7,6 +7,8 @@ import {
   teamName,
 } from '../../lib/team-links'
 import { Disposable } from 'event-kit'
+import { Account } from '../../models/account'
+import { teamUpdater, TeamUpdateState } from '../../lib/team-updater'
 import { teamLinkIcons } from './team-link-icons'
 import { IntegratedTerminal } from './integrated-terminal'
 import { Button } from '../lib/button'
@@ -22,6 +24,9 @@ interface ITeamBarProps {
 
   /** Open the given URL in the user's browser */
   readonly onOpenURL: (url: string) => void
+
+  /** Used to check private repositories for updates */
+  readonly accounts: ReadonlyArray<Account>
 }
 
 interface ITeamBarState {
@@ -44,6 +49,8 @@ interface ITeamBarState {
 
   /** The links shown in the bar, editable in the settings */
   readonly links: ReadonlyArray<ITeamLink>
+
+  readonly update: TeamUpdateState
 }
 
 const terminalHeightKey = 'team-bar-terminal-height'
@@ -100,6 +107,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
   private readonly terminalRef = React.createRef<IntegratedTerminal>()
   private dragStart: { y: number; height: number } | null = null
   private linksSubscription: Disposable | null = null
+  private updateSubscription: Disposable | null = null
 
   public constructor(props: ITeamBarProps) {
     super(props)
@@ -110,6 +118,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
       sessionCwd: props.terminalCwd,
       terminalHeight: loadTerminalHeight(),
       links: getTeamLinks(),
+      update: teamUpdater.state,
     }
   }
 
@@ -118,10 +127,22 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
     this.linksSubscription = onTeamLinksChanged(links =>
       this.setState({ links })
     )
+    this.updateSubscription = teamUpdater.onChanged(update =>
+      this.setState({ update })
+    )
+    teamUpdater.setAccounts(this.props.accounts)
+    teamUpdater.start()
+  }
+
+  public componentDidUpdate(prevProps: ITeamBarProps) {
+    if (prevProps.accounts !== this.props.accounts) {
+      teamUpdater.setAccounts(this.props.accounts)
+    }
   }
 
   public componentWillUnmount() {
     this.linksSubscription?.dispose()
+    this.updateSubscription?.dispose()
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('mousemove', this.onDragMove)
     window.removeEventListener('mouseup', this.onDragEnd)
@@ -256,6 +277,49 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
     />
   )
 
+  private onInstallUpdate = () => {
+    teamUpdater.install()
+  }
+
+  private renderUpdate() {
+    const { update } = this.state
+
+    switch (update.kind) {
+      case 'available':
+        return (
+          <Button
+            className="team-bar-button team-update available"
+            onClick={this.onInstallUpdate}
+            tooltip={`MS2026 Desktop ${update.update.version} をインストールして再起動します`}
+          >
+            <Octicon symbol={octicons.download} />
+            アップデート
+          </Button>
+        )
+      case 'downloading':
+        return (
+          <span className="team-update progress">
+            アップデートをダウンロード中 {Math.round(update.progress * 100)}%
+          </span>
+        )
+      case 'installing':
+        return <span className="team-update progress">再起動しています…</span>
+      case 'error':
+        return update.update === null ? null : (
+          <Button
+            className="team-bar-button team-update error"
+            onClick={this.onInstallUpdate}
+            tooltip={`${update.message}\nクリックして再試行`}
+          >
+            <Octicon symbol={octicons.alert} />
+            アップデートに失敗しました
+          </Button>
+        )
+      default:
+        return null
+    }
+  }
+
   public render() {
     const { terminalOpen } = this.state
 
@@ -268,6 +332,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
             {this.state.links.map(this.renderLink)}
           </nav>
           <span className="team-bar-spacer" />
+          {this.renderUpdate()}
           <Button
             className={classNames('team-bar-button', 'team-terminal-toggle', {
               active: terminalOpen,

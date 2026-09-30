@@ -67,3 +67,25 @@ SmartScreen で「Windows によって PC が保護されました」と表示�
 - **macOS**: アプリを終了してから、新しい `MS2026 Desktop.app` で「アプリケーション」フォルダの古いものを置き換えてください。
 
 特定のバージョンを付けたい場合は、`DESKTOP_VERSION_OVERRIDE=3.7.0 yarn build:team` のように指定できます。そのバージョンが、インストール済みのものより新しくなるようにしてください。
+
+## 自動アップデート
+
+MS2026 Desktop は起動の15秒後と、その後3時間ごとに、[m1r4i/GitHubDesktopForMS2026](https://github.com/m1r4i/GitHubDesktopForMS2026/releases) の Releases に新しいビルドがないかを確認します。見つかると画面下のバーに「アップデート」が表示され、クリックするとダウンロード・インストール・再起動まで自動で行います。About 画面からも手動で確認できます。
+
+- **Windows**: `MS2026DesktopSetup-<arch>.exe` をダウンロードし、アプリの終了後に実行して上書き更新します。
+- **macOS**: `MS2026 Desktop-<arch>.zip` をダウンロードし、アプリの終了後に `.app` を置き換えて再起動します。
+- リポジトリが非公開の場合は、そのリポジトリを読める GitHub アカウントでサインインしておく必要があります。
+
+### リリースの公開
+
+ビルドしたマシンで、リリースを作成できるトークンを指定して実行します。
+
+```sh
+yarn build:team
+MS2026_RELEASE_TOKEN=<トークン> yarn publish:team
+```
+
+- タグ `v<バージョン>` のリリースを作成し、その OS 向けのファイルをアップロードします。
+- Mac 版と Windows 版は別々のマシンでビルドするため、別々のリリースになりますが、アプリは自分の OS 向けのファイルを含む最新のリリースを選びます。
+- リリース先は `app/src/lib/team-release-source.ts` で変更できます(Gitea のリポジトリも指定できます)。
+
