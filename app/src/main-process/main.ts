@@ -57,6 +57,7 @@ import {
   killAllIntegratedTerminals,
   registerIntegratedTerminalHandlers,
 } from './integrated-terminal'
+import { registerTeamUpdaterHandlers } from './team-updater'
 
 app.setAppLogsPath()
 enableSourceMaps()
@@ -726,6 +727,7 @@ app.on('ready', () => {
   )
 
   registerIntegratedTerminalHandlers()
+  registerTeamUpdaterHandlers()
   app.on('will-quit', killAllIntegratedTerminals)
 
   /** An event sent by the renderer asking to focus the main window. */

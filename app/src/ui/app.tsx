@@ -3404,6 +3404,7 @@ export class App extends React.Component<IAppProps, IAppState> {
       <TeamBar
         terminalCwd={repository !== null ? repository.path : null}
         onOpenURL={this.onOpenTeamURL}
+        accounts={this.state.accounts}
       />
     )
   }

@@ -19,6 +19,7 @@ import { isOSNoLongerSupportedByElectron } from '../../lib/get-os'
 import { AriaLiveContainer } from '../accessibility/aria-live-container'
 import { formatDate } from '../../lib/format-date'
 import { teamName } from '../../lib/team-links'
+import { TeamUpdateSection } from './team-update-section'
 
 const logoPath = __DARWIN__
   ? 'static/logo-64x64@2x.png'
@@ -158,9 +159,7 @@ export class About extends React.Component<IAboutProps> {
           receive any updates.
         </p>
       ) : (
-        <p>
-          このビルドは自動更新されません。新しいバージョンはチームのビルドフォルダから入手してください。
-        </p>
+        <TeamUpdateSection />
       )
     }
 

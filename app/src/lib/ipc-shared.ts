@@ -18,6 +18,7 @@ import { NotificationCallback } from 'desktop-notifications'
 import { DesktopAliveEvent } from './stores/alive-store'
 import { CLIAction } from './cli-action'
 import { IIntegratedTerminalOptions } from './integrated-terminal'
+import { ITeamUpdate } from './team-release-source'
 
 /**
  * Defines the simplex IPC channel names we use from the renderer
@@ -93,6 +94,7 @@ export type RequestChannels = {
   'integrated-terminal-kill': (id: number) => void
   'integrated-terminal-data': (id: number, data: string) => void
   'integrated-terminal-exit': (id: number, exitCode: number) => void
+  'team-update-progress': (progress: number) => void
 }
 
 /**
@@ -146,4 +148,9 @@ export type RequestResponseChannels = {
   'integrated-terminal-create': (
     options: IIntegratedTerminalOptions
   ) => Promise<number>
+  'team-update-check': (token: string | null) => Promise<ITeamUpdate | null>
+  'team-update-install': (
+    update: ITeamUpdate,
+    token: string | null
+  ) => Promise<void>
 }

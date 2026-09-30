@@ -40,6 +40,7 @@ import {
   getBundleID,
   getCompanyName,
   getProductName,
+  getVersion,
 } from '../app/package-info'
 
 import { isGitHubActions } from './build-platforms'
@@ -368,6 +369,8 @@ function copyDependencies() {
   // The product name changes depending on whether it's a prod build or dev
   // build, so that we can have them running side by side.
   pkg.productName = getProductName()
+  // Installers and Electron read the version from this package.json
+  pkg.version = getVersion()
   pkg.dependencies = filterExternals(pkg.dependencies)
   pkg.devDependencies =
     isDevelopmentBuild && pkg.devDependencies

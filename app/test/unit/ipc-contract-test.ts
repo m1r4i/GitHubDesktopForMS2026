@@ -74,6 +74,7 @@ describe('IPC channel contract', () => {
     'integrated-terminal-kill',
     'integrated-terminal-data',
     'integrated-terminal-exit',
+    'team-update-progress',
   ] as const
 
   const expectedResponseChannels = [
@@ -106,6 +107,8 @@ describe('IPC channel contract', () => {
     'get-notifications-permission',
     'request-notifications-permission',
     'integrated-terminal-create',
+    'team-update-check',
+    'team-update-install',
   ] as const
 
   describe('RequestChannels', () => {

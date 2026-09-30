@@ -35,6 +35,26 @@
     flex: 1 1 auto;
   }
 
+  .team-update {
+    flex: 0 0 auto;
+
+    &.available {
+      color: var(--ms-accent);
+      background: var(--ms-accent-subtle);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    &.error {
+      color: var(--color-deleted);
+    }
+
+    &.progress {
+      padding: 0 8px;
+      color: var(--text-secondary-color);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
   .team-terminal-toggle.active {
     color: var(--ms-accent);
     background: var(--ms-accent-subtle);
