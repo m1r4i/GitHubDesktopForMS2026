@@ -3,7 +3,12 @@ import assert from 'node:assert'
 import {
   getTeamGreeting,
   teamGiteaServer,
-  teamLinks,
+  defaultTeamLinks as teamLinks,
+  getTeamLinks,
+  isValidTeamLinkURL,
+  parseTeamLinks,
+  setTeamLinks,
+  teamLinkIconOptions,
 } from '../../src/lib/team-links'
 import { getGiteaAPIEndpoint, getHostingServiceName } from '../../src/lib/gitea'
 
@@ -21,7 +26,7 @@ describe('team-links', () => {
   it('does not use emoji', () => {
     const emoji = /\p{Extended_Pictographic}/u
     for (const link of teamLinks) {
-      assert(!emoji.test(link.label + link.description), link.label)
+      assert(!emoji.test(link.label + (link.description ?? '')), link.label)
     }
     for (const hour of [2, 8, 12, 15, 20]) {
       assert(!emoji.test(getTeamGreeting(at(hour))))
@@ -58,5 +63,49 @@ describe('getHostingServiceName', () => {
       getHostingServiceName('https://ghe.example.com/api/v3'),
       'GitHub'
     )
+  })
+})
+
+describe('editable team links', () => {
+  it('parses stored links and drops invalid entries', () => {
+    const links = parseTeamLinks(
+      JSON.stringify([
+        { label: 'Wiki', url: 'https://example.com', icon: 'globe' },
+        { label: 'Bad icon', url: 'https://example.com', icon: 'nope' },
+        { label: 3, url: 'https://example.com', icon: 'link' },
+        'garbage',
+      ])
+    )
+    assert.deepEqual(links, [
+      { label: 'Wiki', url: 'https://example.com', icon: 'globe' },
+    ])
+  })
+
+  it('rejects malformed JSON', () => {
+    assert.equal(parseTeamLinks('{'), null)
+    assert.equal(parseTeamLinks('{}'), null)
+  })
+
+  it('validates URLs', () => {
+    assert(isValidTeamLinkURL('https://example.com/a?b=c'))
+    assert(isValidTeamLinkURL(' http://localhost:3000 '))
+    assert(!isValidTeamLinkURL('javascript:alert(1)'))
+    assert(!isValidTeamLinkURL('file:///etc/passwd'))
+    assert(!isValidTeamLinkURL('https://'))
+  })
+
+  it('has unique icon options', () => {
+    const icons = teamLinkIconOptions.map(o => o.icon)
+    assert.equal(new Set(icons).size, icons.length)
+  })
+
+  it('saves, loads and resets links', () => {
+    const custom = [
+      { label: 'Wiki', url: 'https://example.com', icon: 'globe' as const },
+    ]
+    setTeamLinks(custom)
+    assert.deepEqual(getTeamLinks(), custom)
+    setTeamLinks(null)
+    assert.deepEqual(getTeamLinks(), teamLinks)
   })
 })

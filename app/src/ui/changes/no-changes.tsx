@@ -399,6 +399,18 @@ export class NoChanges extends React.Component<
       return this.renderCreatePullRequestAction(tip)
     }
 
+    if (isGitHub && currentPullRequest !== null) {
+      return this.renderMenuBackedAction(
+        'create-pull-request',
+        `プルリクエスト #${currentPullRequest.pullRequestNumber} を確認する`,
+        <>
+          {currentPullRequest.title}
+          <br />
+          レビュー内容の確認、マージ、クローズをアプリ内で行えます。
+        </>
+      )
+    }
+
     return null
   }
 

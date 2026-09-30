@@ -656,6 +656,20 @@ export interface IAPIPullRequest {
   readonly draft?: boolean
 }
 
+/**
+ * A single pull request as returned by the pull request endpoint, which
+ * (unlike the list endpoint) includes its merge state.
+ */
+export interface IAPIPullRequestDetails extends IAPIPullRequest {
+  /** Whether the pull request can be merged, null while being computed */
+  readonly mergeable?: boolean | null
+  readonly merged?: boolean
+  readonly html_url?: string
+}
+
+/** How to merge a pull request */
+export type PullRequestMergeMethod = 'merge' | 'squash' | 'rebase'
+
 /** Information about a pull request review as returned by the GitHub API. */
 export interface IAPIPullRequestReview {
   readonly id: number
@@ -1322,6 +1336,100 @@ export class API {
       log.warn(`failed fetching PR for ${owner}/${name}/pulls/${prNumber}`, e)
       throw e
     }
+  }
+
+  /** Fetch a pull request including its merge state. */
+  public async fetchPullRequestDetails(
+    owner: string,
+    name: string,
+    prNumber: number
+  ): Promise<IAPIPullRequestDetails> {
+    const path = `repos/${owner}/${name}/pulls/${prNumber}`
+    const response = await this.ghRequest('GET', path, { reloadCache: true })
+    const pr = await parsedResponse<IAPIPullRequestDetails>(response)
+    return this.isGitea ? { ...pr, ...this.normalizeGiteaPullRequest(pr) } : pr
+  }
+
+  /**
+   * Create a pull request.
+   *
+   * @param head The branch containing the changes. Prefix it with the owner
+   *             (`owner:branch`) when the branch lives in a fork.
+   * @param base The branch to merge the changes into.
+   */
+  public async createPullRequest(
+    owner: string,
+    name: string,
+    options: {
+      readonly title: string
+      readonly body: string
+      readonly head: string
+      readonly base: string
+    }
+  ): Promise<IAPIPullRequest> {
+    const response = await this.ghRequest(
+      'POST',
+      `repos/${owner}/${name}/pulls`,
+      { body: options }
+    )
+    const pr = await parsedResponse<IAPIPullRequest>(response)
+    return this.isGitea ? this.normalizeGiteaPullRequest(pr) : pr
+  }
+
+  /**
+   * Merge a pull request.
+   *
+   * @param deleteBranch Whether to delete the pull request's branch after
+   *                     merging (only when it lives in the same repository).
+   */
+  public async mergePullRequest(
+    owner: string,
+    name: string,
+    prNumber: number,
+    method: PullRequestMergeMethod,
+    deleteBranch: string | null
+  ): Promise<void> {
+    const path = `repos/${owner}/${name}/pulls/${prNumber}/merge`
+
+    // Gitea and GitHub use different HTTP methods and parameters here
+    const response = this.isGitea
+      ? await this.ghRequest('POST', path, {
+          body: {
+            Do: method,
+            delete_branch_after_merge: deleteBranch !== null,
+          },
+        })
+      : await this.ghRequest('PUT', path, { body: { merge_method: method } })
+
+    await ensureSuccessfulResponse(response)
+
+    if (!this.isGitea && deleteBranch !== null) {
+      const ref = `heads/${deleteBranch
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/')}`
+      const deleteResponse = await this.ghRequest(
+        'DELETE',
+        `repos/${owner}/${name}/git/refs/${ref}`
+      )
+      if (!deleteResponse.ok) {
+        log.warn(`mergePullRequest: unable to delete branch ${deleteBranch}`)
+      }
+    }
+  }
+
+  /** Close a pull request without merging it. */
+  public async closePullRequest(
+    owner: string,
+    name: string,
+    prNumber: number
+  ): Promise<void> {
+    const response = await this.ghRequest(
+      'PATCH',
+      `repos/${owner}/${name}/pulls/${prNumber}`,
+      { body: { state: 'closed' } }
+    )
+    await ensureSuccessfulResponse(response)
   }
 
   /**
@@ -2288,6 +2396,18 @@ export class API {
       log.error(msg, e)
       throw new Error(msg)
     }
+  }
+}
+
+/**
+ * Throw an APIError describing the failure if the response isn't successful.
+ * Unlike `parsedResponse` this doesn't require a JSON body on success.
+ */
+async function ensureSuccessfulResponse(response: Response) {
+  if (!response.ok) {
+    // parsedResponse throws an APIError with the message from the body
+    await parsedResponse<unknown>(response)
+    throw new APIError(response, null)
   }
 }
 

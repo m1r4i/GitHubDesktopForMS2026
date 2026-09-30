@@ -1,0 +1,212 @@
+// In-app pull request creation, the pull request details dialog and the
+// team links editor of the MS2026 build.
+
+dialog.open-pull-request {
+  .open-pull-request-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+    padding: var(--spacing) var(--spacing-double);
+    border-bottom: var(--base-border);
+
+    textarea {
+      min-height: 54px;
+      resize: vertical;
+    }
+  }
+
+  .open-pull-request-form + .open-pull-request-content {
+    min-height: calc(100vh - 400px);
+  }
+
+  .dialog-footer .button-component .octicon {
+    margin-right: var(--spacing-half);
+  }
+}
+
+dialog#pull-request-details {
+  width: 560px;
+
+  .pr-loading {
+    color: var(--text-secondary-color);
+  }
+
+  .pr-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing);
+    margin-bottom: var(--spacing);
+    color: var(--text-secondary-color);
+
+    .pr-branches {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-half);
+    }
+  }
+
+  .pr-status {
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: #fff;
+    background: var(--color-new);
+
+    &.draft,
+    &.closed {
+      background: var(--text-secondary-color);
+    }
+
+    &.merged {
+      background: #8250df;
+    }
+  }
+
+  .pr-body {
+    max-height: 240px;
+    overflow-y: auto;
+    padding: var(--spacing);
+    border-radius: 10px;
+    background: var(--box-alt-background-color);
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: text;
+
+    .pr-body-empty {
+      color: var(--text-secondary-color);
+    }
+  }
+
+  .pr-merge-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+    margin-top: var(--spacing-double);
+  }
+
+  .pr-mergeable {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-half);
+    color: var(--text-secondary-color);
+
+    &.ok {
+      color: var(--color-new);
+    }
+
+    &.conflict {
+      color: var(--color-deleted);
+    }
+  }
+
+  .dialog-footer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    .pr-secondary-actions {
+      display: flex;
+      gap: var(--spacing-half);
+
+      .octicon {
+        margin-right: var(--spacing-half);
+      }
+    }
+  }
+}
+
+.team-links-preferences {
+  .team-links-description {
+    margin-top: 0;
+    color: var(--text-secondary-color);
+  }
+
+  .team-links-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+    margin: 0 0 var(--spacing);
+    padding: 0;
+    list-style: none;
+  }
+
+  .team-link-row {
+    padding: var(--spacing);
+    border-radius: 10px;
+    background: var(--box-alt-background-color);
+  }
+
+  .team-link-fields {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--spacing);
+
+    .text-box-component {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .text-box-component.invalid input {
+      border-color: var(--color-deleted);
+    }
+  }
+
+  .team-link-current-icon {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .team-link-row-actions {
+    display: flex;
+    gap: 2px;
+
+    .button-component {
+      padding: 0 6px;
+    }
+  }
+
+  .team-link-icon-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: var(--spacing);
+
+    .team-link-icon-option {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      justify-content: center;
+      border-color: transparent;
+      background: transparent;
+
+      &.selected {
+        color: #fff;
+        background: var(--ms-accent);
+        border-color: var(--ms-accent);
+      }
+    }
+  }
+
+  .team-link-error {
+    margin: var(--spacing-half) 0 0;
+    color: var(--color-deleted);
+    font-size: var(--font-size-sm);
+  }
+
+  .team-links-empty {
+    color: var(--text-secondary-color);
+  }
+
+  .team-links-actions {
+    display: flex;
+    gap: var(--spacing-half);
+
+    .octicon {
+      margin-right: var(--spacing-half);
+    }
+  }
+}

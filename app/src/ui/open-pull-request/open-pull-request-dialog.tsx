@@ -4,8 +4,20 @@ import { getDotComAPIEndpoint } from '../../lib/api'
 import { isGiteaEndpoint } from '../../lib/gitea'
 import { Branch } from '../../models/branch'
 import { ImageDiffType } from '../../models/diff'
-import { Repository } from '../../models/repository'
-import { DialogFooter, OkCancelButtonGroup, Dialog } from '../dialog'
+import {
+  isRepositoryWithGitHubRepository,
+  Repository,
+} from '../../models/repository'
+import {
+  DialogFooter,
+  OkCancelButtonGroup,
+  Dialog,
+  DialogError,
+} from '../dialog'
+import { PopupType } from '../../models/popup'
+import { TextBox } from '../lib/text-box'
+import { TextArea } from '../lib/text-area'
+import { Button } from '../lib/button'
 import { Dispatcher } from '../dispatcher'
 import { Ref } from '../lib/ref'
 import { Octicon } from '../octicons'
@@ -86,22 +98,133 @@ interface IOpenPullRequestDialogProps {
   readonly onDismissed: () => void
 }
 
+interface IOpenPullRequestDialogState {
+  readonly title: string
+  readonly body: string
+  readonly creating: boolean
+  readonly error: string | null
+}
+
 /** The component for start a pull request. */
-export class OpenPullRequestDialog extends React.Component<IOpenPullRequestDialogProps> {
-  private onCreatePullRequest = () => {
+export class OpenPullRequestDialog extends React.Component<
+  IOpenPullRequestDialogProps,
+  IOpenPullRequestDialogState
+> {
+  private mounted = false
+
+  public constructor(props: IOpenPullRequestDialogProps) {
+    super(props)
+    this.state = {
+      // Suggest the branch name as the title
+      title: props.currentBranch.nameWithoutRemote,
+      body: '',
+      creating: false,
+      error: null,
+    }
+  }
+
+  public componentDidMount() {
+    this.mounted = true
+  }
+
+  public componentWillUnmount() {
+    this.mounted = false
+  }
+
+  /** Whether pull requests can be created through the API */
+  private get canCreateInApp() {
+    return isRepositoryWithGitHubRepository(this.props.repository)
+  }
+
+  private onCreatePullRequest = async () => {
     const { currentBranchHasPullRequest, dispatcher, repository, onDismissed } =
       this.props
 
     if (currentBranchHasPullRequest) {
       dispatcher.showPullRequest(repository)
-    } else {
-      const { baseBranch } = this.props.pullRequestState
-      dispatcher.createPullRequest(repository, baseBranch ?? undefined)
-      dispatcher.incrementMetric('createPullRequestCount')
-      dispatcher.incrementMetric('createPullRequestFromPreviewCount')
+      onDismissed()
+      return
     }
 
+    const { baseBranch } = this.props.pullRequestState
+    if (!this.canCreateInApp || baseBranch === null) {
+      this.onCreateInBrowser()
+      return
+    }
+
+    this.setState({ creating: true, error: null })
+    try {
+      const created = await dispatcher.createPullRequestInApp(
+        repository,
+        baseBranch,
+        this.state.title.trim(),
+        this.state.body
+      )
+      dispatcher.incrementMetric('createPullRequestFromPreviewCount')
+      onDismissed()
+
+      if (isRepositoryWithGitHubRepository(repository)) {
+        dispatcher.showPopup({
+          type: PopupType.PullRequestDetails,
+          repository,
+          ...created,
+        })
+      }
+    } catch (e) {
+      if (this.mounted) {
+        this.setState({
+          creating: false,
+          error: `プルリクエストを作成できませんでした: ${
+            e instanceof Error ? e.message : e
+          }`,
+        })
+      }
+    }
+  }
+
+  private onCreateInBrowser = () => {
+    const { dispatcher, repository, onDismissed } = this.props
+    const { baseBranch } = this.props.pullRequestState
+    dispatcher.createPullRequest(repository, baseBranch ?? undefined)
+    dispatcher.incrementMetric('createPullRequestCount')
+    dispatcher.incrementMetric('createPullRequestFromPreviewCount')
     onDismissed()
+  }
+
+  private onTitleChanged = (title: string) => {
+    this.setState({ title })
+  }
+
+  private onBodyChanged = (body: string) => {
+    this.setState({ body })
+  }
+
+  private renderForm() {
+    if (this.props.currentBranchHasPullRequest || !this.canCreateInApp) {
+      return null
+    }
+
+    const { title, body, creating } = this.state
+
+    return (
+      <div className="open-pull-request-form">
+        <TextBox
+          label="タイトル"
+          value={title}
+          onValueChanged={this.onTitleChanged}
+          disabled={creating}
+          autoFocus={true}
+        />
+        <TextArea
+          label="説明"
+          value={body}
+          onValueChanged={this.onBodyChanged}
+          disabled={creating}
+          rows={3}
+          placeholder="変更内容やレビューしてほしい点など"
+        />
+      </div>
+    )
   }
 
   private onBranchChange = (branch: Branch) => {
@@ -263,10 +386,14 @@ export class OpenPullRequestDialog extends React.Component<IOpenPullRequestDialo
           isEnterprise ? ' Enterprise' : ''
         }.`
 
-    const okButton = (
+    const createInApp = !currentBranchHasPullRequest && this.canCreateInApp
+
+    const okButton = createInApp ? (
+      'プルリクエストを作成'
+    ) : (
       <>
         {currentBranchHasPullRequest && (
-          <Octicon symbol={octicons.linkExternal} />
+          <Octicon symbol={octicons.gitPullRequest} />
         )}
         {__DARWIN__
           ? `${viewCreate} Pull Request`
@@ -274,15 +401,32 @@ export class OpenPullRequestDialog extends React.Component<IOpenPullRequestDialo
       </>
     )
 
+    const noChanges = commitSHAs === null || commitSHAs.length === 0
+
     return (
       <DialogFooter>
         <PullRequestMergeStatus mergeStatus={mergeStatus} />
 
+        {createInApp && (
+          <Button
+            onClick={this.onCreateInBrowser}
+            disabled={noChanges || this.state.creating}
+            tooltip={buttonTitle}
+          >
+            <Octicon symbol={octicons.linkExternal} />
+            ブラウザで作成
+          </Button>
+        )}
+
         <OkCancelButtonGroup
           okButtonText={okButton}
-          okButtonTitle={buttonTitle}
+          okButtonTitle={createInApp ? undefined : buttonTitle}
           cancelButtonText="Cancel"
-          okButtonDisabled={commitSHAs === null || commitSHAs.length === 0}
+          okButtonDisabled={
+            noChanges ||
+            this.state.creating ||
+            (createInApp && this.state.title.trim().length === 0)
+          }
         />
       </DialogFooter>
     )
@@ -295,8 +439,14 @@ export class OpenPullRequestDialog extends React.Component<IOpenPullRequestDialo
         className="open-pull-request"
         onSubmit={this.onCreatePullRequest}
         onDismissed={this.props.onDismissed}
+        loading={this.state.creating}
+        disabled={this.state.creating}
       >
         {this.renderHeader()}
+        {this.state.error !== null && (
+          <DialogError>{this.state.error}</DialogError>
+        )}
+        {this.renderForm()}
         {this.renderContent()}
         {this.renderFooter()}
       </Dialog>

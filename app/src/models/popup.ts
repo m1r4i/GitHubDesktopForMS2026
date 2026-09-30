@@ -90,6 +90,7 @@ export enum PopupType {
   SSHKeyPassphrase = 'SSHKeyPassphrase',
   SSHUserPassword = 'SSHUserPassword',
   PullRequestChecksFailed = 'PullRequestChecksFailed',
+  PullRequestDetails = 'PullRequestDetails',
   CICheckRunRerun = 'CICheckRunRerun',
   WarnForcePush = 'WarnForcePush',
   DiscardChangesRetry = 'DiscardChangesRetry',
@@ -407,6 +408,15 @@ export type PopupDetail =
       pullRequest: PullRequest
       shouldChangeRepository: boolean
       checks: ReadonlyArray<IRefCheck>
+    }
+  | {
+      type: PopupType.PullRequestDetails
+      repository: RepositoryWithGitHubRepository
+      /** The owner of the repository the pull request was opened against */
+      owner: string
+      /** The name of the repository the pull request was opened against */
+      name: string
+      pullRequestNumber: number
     }
   | {
       type: PopupType.CICheckRunRerun
