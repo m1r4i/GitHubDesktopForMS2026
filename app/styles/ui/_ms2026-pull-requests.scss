@@ -119,80 +119,110 @@ dialog#pull-request-details {
 }
 
 .team-links-preferences {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  h2 {
+    margin-top: 0;
+  }
+
   .team-links-description {
     margin-top: 0;
     color: var(--text-secondary-color);
   }
 
+  // A single inset grouped list which scrolls inside the dialog
   .team-links-editor {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing);
+    max-height: calc(100vh - 360px);
+    min-height: 120px;
     margin: 0 0 var(--spacing);
     padding: 0;
+    overflow-y: auto;
     list-style: none;
-  }
-
-  .team-link-row {
-    padding: var(--spacing);
     border-radius: 10px;
     background: var(--box-alt-background-color);
   }
 
+  .team-link-row {
+    padding: 6px 8px;
+
+    & + .team-link-row {
+      box-shadow: inset 0 1px 0 var(--box-border-color);
+    }
+  }
+
   .team-link-fields {
     display: flex;
-    align-items: flex-end;
-    gap: var(--spacing);
+    align-items: center;
+    gap: 6px;
 
     .text-box-component {
-      flex: 1 1 0;
       min-width: 0;
+
+      input {
+        height: 26px;
+      }
     }
 
-    .text-box-component.invalid input {
+    .team-link-name {
+      flex: 0 0 120px;
+    }
+
+    .team-link-url {
+      flex: 1 1 auto;
+    }
+
+    .team-link-url.invalid input {
       border-color: var(--color-deleted);
     }
   }
 
-  .team-link-current-icon {
-    width: 32px;
-    padding: 0;
+  // Quiet, borderless icon buttons
+  .team-link-current-icon,
+  .team-link-row-actions .button-component,
+  .team-link-icon-option {
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+
+    &:not([aria-disabled='true']):hover {
+      border-color: transparent;
+      background: var(--box-hover-background-color);
+    }
+  }
+
+  .team-link-current-icon {
+    flex: 0 0 auto;
+    color: var(--ms-accent);
   }
 
   .team-link-row-actions {
     display: flex;
-    gap: 2px;
-
-    .button-component {
-      padding: 0 6px;
-    }
+    flex: 0 0 auto;
+    gap: 0;
+    color: var(--text-secondary-color);
   }
 
   .team-link-icon-picker {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    margin-top: var(--spacing);
+    gap: 2px;
+    margin: 6px 0 2px 32px;
 
-    .team-link-icon-option {
-      width: 30px;
-      height: 30px;
-      padding: 0;
-      justify-content: center;
-      border-color: transparent;
-      background: transparent;
-
-      &.selected {
-        color: #fff;
-        background: var(--ms-accent);
-        border-color: var(--ms-accent);
-      }
+    .team-link-icon-option.selected {
+      color: #fff;
+      background: var(--ms-accent);
     }
   }
 
   .team-link-error {
-    margin: var(--spacing-half) 0 0;
+    margin: 4px 0 0 32px;
     color: var(--color-deleted);
     font-size: var(--font-size-sm);
   }

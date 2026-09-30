@@ -102,17 +102,18 @@ class TeamLinkRow extends React.Component<
             <Octicon symbol={teamLinkIcons[link.icon]} />
           </Button>
           <TextBox
-            label="名前"
+            ariaLabel={`リンク ${index + 1} の名前`}
             value={link.label}
-            placeholder="ドライブ"
+            placeholder="名前"
             onValueChanged={this.onLabelChanged}
+            className="team-link-name"
           />
           <TextBox
-            label="URL"
+            ariaLabel={`リンク ${index + 1} の URL`}
             value={link.url}
             placeholder="https://"
             onValueChanged={this.onURLChanged}
-            className={urlInvalid ? 'invalid' : undefined}
+            className={urlInvalid ? 'team-link-url invalid' : 'team-link-url'}
           />
           <div className="team-link-row-actions">
             <Button
