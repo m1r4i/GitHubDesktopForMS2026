@@ -229,6 +229,8 @@ import { DeleteWorktreeDialog } from './worktrees/delete-worktree-dialog'
 import { DeleteWorktreeFailedDialog } from './worktrees/delete-worktree-failed-dialog'
 import { WorktreeEntry } from '../models/worktree'
 import { shouldShowWorktreeDropdown } from '../lib/worktree-dropdown'
+import { TeamBar } from './team-bar/team-bar'
+import { isGiteaEndpoint } from '../lib/gitea'
 
 const MinuteInMilliseconds = 1000 * 60
 const HourInMilliseconds = MinuteInMilliseconds * 60
@@ -659,7 +661,13 @@ export class App extends React.Component<IAppProps, IAppState> {
     inBackground: boolean,
     skipGuidCheck: boolean = false
   ) {
-    if (__LINUX__ || __RELEASE_CHANNEL__ === 'development') {
+    // Updates are disabled unless the build was given an update server, see
+    // getUpdatesURL in script/dist-info.ts
+    if (
+      __LINUX__ ||
+      __RELEASE_CHANNEL__ === 'development' ||
+      __UPDATES_URL__ === ''
+    ) {
       return
     }
 
@@ -748,7 +756,13 @@ export class App extends React.Component<IAppProps, IAppState> {
       branchTip.branch.upstreamWithoutRemote
     )
 
-    const url = `${htmlURL}/${view}/${urlEncodedBranchName}`
+    // Gitea shows branches at /src/branch/:name rather than /tree/:name
+    const isGitea =
+      state.repository.gitHubRepository !== null &&
+      isGiteaEndpoint(state.repository.gitHubRepository.endpoint)
+    const path = isGitea && view === 'tree' ? 'src/branch' : view
+
+    const url = `${htmlURL}/${path}/${urlEncodedBranchName}`
     this.props.dispatcher.openInBrowser(url)
   }
 
@@ -3359,10 +3373,25 @@ export class App extends React.Component<IAppProps, IAppState> {
         {this.renderToolbar()}
         {this.renderBanner()}
         {this.renderRepository()}
+        {this.renderTeamBar()}
         {this.renderPopups()}
         {this.renderDragElement()}
       </div>
     )
+  }
+
+  private renderTeamBar() {
+    const repository = this.state.selectedState?.repository ?? null
+    return (
+      <TeamBar
+        terminalCwd={repository !== null ? repository.path : null}
+        onOpenURL={this.onOpenTeamURL}
+      />
+    )
+  }
+
+  private onOpenTeamURL = (url: string) => {
+    this.props.dispatcher.openInBrowser(url)
   }
 
   private renderRepositoryList = (): JSX.Element => {

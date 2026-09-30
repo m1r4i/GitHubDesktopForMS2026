@@ -53,6 +53,10 @@ import {
 import { initializeDesktopNotifications } from './notifications'
 import parseCommandLineArgs from 'minimist'
 import { CLIAction } from '../lib/cli-action'
+import {
+  killAllIntegratedTerminals,
+  registerIntegratedTerminalHandlers,
+} from './integrated-terminal'
 
 app.setAppLogsPath()
 enableSourceMaps()
@@ -120,7 +124,8 @@ if (__DARWIN__) {
 // On Windows, in order to get notifications properly working for dev builds,
 // we'll want to set the right App User Model ID from production builds.
 if (__WIN32__ && __DEV__) {
-  app.setAppUserModelId('com.squirrel.GitHubDesktop.GitHubDesktop')
+  // Must match getWindowsIdentifierName in script/dist-info.ts
+  app.setAppUserModelId('com.squirrel.MS2026Desktop.MS2026Desktop')
 }
 
 app.on('window-all-closed', () => {
@@ -719,6 +724,9 @@ app.on('ready', () => {
     'is-window-focused',
     async () => mainWindow?.isFocused() ?? false
   )
+
+  registerIntegratedTerminalHandlers()
+  app.on('will-quit', killAllIntegratedTerminals)
 
   /** An event sent by the renderer asking to focus the main window. */
   ipcMain.on('focus-window', () => {

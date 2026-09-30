@@ -18,6 +18,7 @@ import { encodePathAsUrl } from '../../lib/path'
 import { isOSNoLongerSupportedByElectron } from '../../lib/get-os'
 import { AriaLiveContainer } from '../accessibility/aria-live-container'
 import { formatDate } from '../../lib/format-date'
+import { teamName } from '../../lib/team-links'
 
 const logoPath = __DARWIN__
   ? 'static/logo-64x64@2x.png'
@@ -89,6 +90,10 @@ class UpdateInfo extends React.Component<IUpdateInfoProps> {
  */
 export class About extends React.Component<IAboutProps> {
   private get canCheckForUpdates() {
+    if (__UPDATES_URL__ === '' && this.props.allowDevelopment !== true) {
+      return false
+    }
+
     return (
       __RELEASE_CHANNEL__ !== 'development' ||
       this.props.allowDevelopment === true
@@ -147,10 +152,14 @@ export class About extends React.Component<IAboutProps> {
     }
 
     if (!this.canCheckForUpdates) {
-      return (
+      return __RELEASE_CHANNEL__ === 'development' ? (
         <p>
           The application is currently running in development and will not
           receive any updates.
+        </p>
+      ) : (
+        <p>
+          このビルドは自動更新されません。新しいバージョンはチームのビルドフォルダから入手してください。
         </p>
       )
     }
@@ -231,7 +240,8 @@ export class About extends React.Component<IAboutProps> {
   }
 
   private renderBetaLink() {
-    if (__RELEASE_CHANNEL__ === 'beta') {
+    // The beta channel is for the official app
+    if (__RELEASE_CHANNEL__ === 'beta' || __UPDATES_URL__ === '') {
       return
     }
 
@@ -268,14 +278,12 @@ export class About extends React.Component<IAboutProps> {
         {this.renderUpdateErrors()}
         <DialogContent>
           <Row className="logo">
-            <img
-              src={DesktopLogo}
-              alt="GitHub Desktop"
-              width="64"
-              height="64"
-            />
+            <img src={DesktopLogo} alt={name} width="64" height="64" />
           </Row>
           <h1 id={titleId}>About {name}</h1>
+          <p className="no-padding team-edition">
+            {teamName} チーム専用エディション · Gitea 対応
+          </p>
           <p className="no-padding">
             <span className="selectable-text">
               {versionText} ({this.props.applicationArchitecture})

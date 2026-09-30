@@ -145,7 +145,15 @@ import {
   IAPIRepoRuleset,
   deleteToken,
   IAPICreatePushProtectionBypassResponse,
+  fetchGiteaUser,
 } from '../api'
+import {
+  getGiteaAPIEndpoint,
+  getGiteaCompareURL,
+  getHostingServiceName,
+  getPullRequestURL,
+  isGiteaEndpoint,
+} from '../gitea'
 import { shell } from '../app-shell'
 import {
   CompareAction,
@@ -2933,8 +2941,17 @@ export class AppStore extends TypedBaseStore<IAppState> {
     const askForConfirmationWhenStashingAllChanges =
       changesState.stashEntry !== null
 
+    const gitHubRepository =
+      selectedRepository instanceof Repository
+        ? selectedRepository.gitHubRepository
+        : null
+
     updatePreferredAppMenuItemLabels({
       ...labels,
+      hostingServiceName:
+        gitHubRepository !== null
+          ? getHostingServiceName(gitHubRepository.endpoint)
+          : undefined,
       contributionTargetDefaultBranch,
       isForcePushForCurrentRepository,
       isStashedChangesVisible,
@@ -4918,7 +4935,10 @@ export class AppStore extends TypedBaseStore<IAppState> {
       // If the request fails, we want to preserve the existing GitHub
       // repository info. But if we didn't have a GitHub repository already or
       // the endpoint changed, the skeleton repository is better than nothing.
-      if (endpoint !== repository.gitHubRepository?.endpoint) {
+      if (
+        endpoint !== repository.gitHubRepository?.endpoint ||
+        repository.gitHubRepository.htmlURL === null
+      ) {
         const ghRepo = await repoStore.upsertGitHubRepositoryFromMatch(match)
         return repoStore.setGitHubRepository(repository, ghRepo)
       }
@@ -7680,7 +7700,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
         if (match === null) {
           this.emitError(
             new ExternalEditorError(
-              `No suitable editors installed for GitHub Desktop to launch. Install ${suggestedExternalEditor.name} for your platform and restart GitHub Desktop to try again.`,
+              `No suitable editors installed for MS2026 Desktop to launch. Install ${suggestedExternalEditor.name} for your platform and restart MS2026 Desktop to try again.`,
               { suggestDefaultEditor: true }
             )
           )
@@ -7757,7 +7777,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
       if (match === null) {
         this.emitError(
           new ExternalEditorError(
-            `No suitable editors installed for GitHub Desktop to launch. Install ${suggestedExternalEditor.name} for your platform and restart GitHub Desktop to try again.`,
+            `No suitable editors installed for MS2026 Desktop to launch. Install ${suggestedExternalEditor.name} for your platform and restart MS2026 Desktop to try again.`,
             { suggestDefaultEditor: true }
           )
         )
@@ -8143,6 +8163,26 @@ export class AppStore extends TypedBaseStore<IAppState> {
     )
     await this.accountsStore.removeAccount(account)
     await deleteToken(account)
+  }
+
+  /**
+   * Add an account for a Gitea server authenticated with a personal access
+   * token. Throws if the server address is invalid, the server isn't a Gitea
+   * server or the token is rejected.
+   */
+  public async _addGiteaAccount(
+    serverAddress: string,
+    token: string
+  ): Promise<Account> {
+    const endpoint = getGiteaAPIEndpoint(serverAddress)
+
+    if (endpoint === null) {
+      throw new Error(`'${serverAddress}' is not a valid server address.`)
+    }
+
+    const account = await fetchGiteaUser(endpoint, token.trim())
+    await this._addAccount(account)
+    return account
   }
 
   private async _addAccount(account: Account): Promise<void> {
@@ -8577,13 +8617,17 @@ export class AppStore extends TypedBaseStore<IAppState> {
   }
 
   public async _showPullRequestByPR(pr: PullRequest): Promise<void> {
-    const { htmlURL: baseRepoUrl } = pr.base.gitHubRepository
+    const { htmlURL: baseRepoUrl, endpoint } = pr.base.gitHubRepository
 
     if (baseRepoUrl === null) {
       return
     }
 
-    const showPrUrl = `${baseRepoUrl}/pull/${pr.pullRequestNumber}`
+    const showPrUrl = getPullRequestURL(
+      baseRepoUrl,
+      endpoint,
+      pr.pullRequestNumber
+    )
 
     await this._openInBrowser(showPrUrl)
   }
@@ -8662,6 +8706,25 @@ export class AppStore extends TypedBaseStore<IAppState> {
     const { parent, owner, name, htmlURL } = gitHubRepository
     const isForkContributingToParent =
       isForkedRepositoryContributingToParent(repository)
+
+    if (isGiteaEndpoint(gitHubRepository.endpoint)) {
+      const baseRepoURL =
+        isForkContributingToParent && parent !== null ? parent.htmlURL : htmlURL
+
+      if (baseRepoURL === null) {
+        return
+      }
+
+      const compareURL = getGiteaCompareURL(
+        baseRepoURL,
+        compareBranch.upstreamWithoutRemote ?? compareBranch.nameWithoutRemote,
+        baseBranch?.nameWithoutRemote,
+        isForkContributingToParent ? owner.login : undefined
+      )
+
+      await this._openInBrowser(compareURL)
+      return
+    }
 
     const baseForkPreface =
       isForkContributingToParent && parent !== null

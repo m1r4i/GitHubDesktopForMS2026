@@ -53,6 +53,7 @@ import {
 } from './dist-info'
 
 import {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -70,10 +71,30 @@ import { copyCopilotDependency } from './copilot'
 
 const isPublishableBuild = isPublishable()
 const isDevelopmentBuild = getChannel() === 'development'
+
+/**
+ * The macOS code signing identity, e.g. "Developer ID Application: …". When
+ * not provided the app is ad-hoc signed, which lets it run on Apple Silicon
+ * without an Apple Developer account (Gatekeeper will ask to confirm opening
+ * it the first time).
+ */
+const macSigningIdentity = process.env.DESKTOP_MAC_SIGNING_IDENTITY
+const isAdHocSignedBuild = isDevelopmentBuild || !macSigningIdentity
+
+/**
+ * Builds without GitHub's OAuth app secret use the development OAuth app, see
+ * __DEV_SECRETS__ in app/app-info.ts, and so must register its URL scheme.
+ */
+const usesDevelopmentOAuthApp =
+  isDevelopmentBuild || !process.env.DESKTOP_OAUTH_CLIENT_SECRET
 const shouldSkipPackaging = process.env.DESKTOP_SKIP_PACKAGE === '1'
 
 const projectRoot = path.join(__dirname, '..')
-const entitlementsSuffix = isDevelopmentBuild ? '-dev' : ''
+// Ad-hoc signed apps have no Team ID, so the hardened runtime's library
+// validation would refuse to load Electron Framework (and other bundled
+// libraries) into the process. The dev entitlements disable library
+// validation which is what ad-hoc signed builds need to launch.
+const entitlementsSuffix = isAdHocSignedBuild ? '-dev' : ''
 const entitlementsPath = `${projectRoot}/script/entitlements${entitlementsSuffix}.plist`
 const extendInfoPath = `${projectRoot}/script/info.plist`
 const outRoot = path.join(projectRoot, 'out')
@@ -97,7 +118,12 @@ generateLicenseMetadata(outRoot)
 
 moveAnalysisFiles()
 
-if (isGitHubActions() && process.platform === 'darwin' && isPublishableBuild) {
+if (
+  isGitHubActions() &&
+  process.platform === 'darwin' &&
+  isPublishableBuild &&
+  !isAdHocSignedBuild
+) {
   console.log('Setting up keychain…')
   cp.execSync(path.join(__dirname, 'setup-macos-keychain'))
 }
@@ -176,10 +202,14 @@ async function packageApp() {
   }
 
   // get notarization deets, unless we're not going to publish this
-  const osxNotarize = isPublishableBuild ? getNotarizationOptions() : undefined
+  const osxNotarize =
+    isPublishableBuild && !isAdHocSignedBuild
+      ? getNotarizationOptions()
+      : undefined
 
   if (
     isPublishableBuild &&
+    !isAdHocSignedBuild &&
     isGitHubActions() &&
     process.platform === 'darwin' &&
     osxNotarize === undefined
@@ -232,20 +262,23 @@ async function packageApp() {
         hardenedRuntime: true,
         entitlements: entitlementsPath,
       }),
-      type: isPublishableBuild ? 'distribution' : 'development',
-      // For development, we will use '-' as the identifier so that codesign
-      // will sign the app to run locally. We need to disable 'identity-validation'
-      // or otherwise it will replace '-' with one of the regular codesigning
-      // identities in our system.
-      identity: isDevelopmentBuild ? '-' : undefined,
-      identityValidation: !isDevelopmentBuild,
+      type:
+        isPublishableBuild && !isAdHocSignedBuild
+          ? 'distribution'
+          : 'development',
+      // Without a signing identity we will use '-' as the identifier so that
+      // codesign will ad-hoc sign the app. We need to disable
+      // 'identity-validation' or otherwise it will replace '-' with one of the
+      // regular codesigning identities in our system.
+      identity: isAdHocSignedBuild ? '-' : macSigningIdentity,
+      identityValidation: !isAdHocSignedBuild,
     },
     osxNotarize,
     protocols: [
       {
         name: getBundleID(),
         schemes: [
-          !isDevelopmentBuild
+          !usesDevelopmentOAuthApp
             ? 'x-github-desktop-auth'
             : 'x-github-desktop-dev-auth',
           'x-github-client',
@@ -349,6 +382,19 @@ function copyDependencies() {
 
   console.log('  Installing dependencies via yarn…')
   cp.execSync('yarn install', { cwd: outRoot, env: process.env })
+
+  // node-pty's published package ships its macOS spawn-helper without the
+  // executable bit, which makes spawning a shell fail with "posix_spawnp
+  // failed". Fix it before the app is signed.
+  const nodePtyPrebuilds = path.join(outRoot, 'node_modules/node-pty/prebuilds')
+  if (existsSync(nodePtyPrebuilds)) {
+    for (const dir of readdirSync(nodePtyPrebuilds)) {
+      const helper = path.join(nodePtyPrebuilds, dir, 'spawn-helper')
+      if (existsSync(helper)) {
+        chmodSync(helper, 0o755)
+      }
+    }
+  }
 
   console.log('  Copying desktop-askpass-trampoline…')
   const trampolineSource = path.resolve(
