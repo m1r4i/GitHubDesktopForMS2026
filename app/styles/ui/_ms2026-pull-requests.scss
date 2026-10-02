@@ -240,3 +240,273 @@ dialog#pull-request-details {
     }
   }
 }
+
+// Reviewers of a pull request, in the details and create dialogs
+.reviewer-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-half);
+
+  .reviewer-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .reviewer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 4px 0 10px;
+    border-radius: 999px;
+    background: var(--box-alt-background-color);
+
+    &.state-selected,
+    &.state-requested {
+      padding-right: 2px;
+    }
+
+    &:not(.state-selected):not(.state-requested) {
+      padding-right: 10px;
+    }
+  }
+
+  .reviewer-login {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .reviewer-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary-color);
+
+    .octicon {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  .state-approved .reviewer-state {
+    color: var(--color-new);
+  }
+
+  .state-changes_requested .reviewer-state {
+    color: var(--color-deleted);
+  }
+
+  .state-requested .reviewer-state .octicon,
+  .state-pending .reviewer-state .octicon {
+    color: #bf8700;
+  }
+
+  .reviewer-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary-color);
+
+    &:not([aria-disabled='true']):hover {
+      background: var(--box-hover-background-color);
+    }
+  }
+
+  .reviewer-empty {
+    margin: 0;
+    color: var(--text-secondary-color);
+  }
+
+  .reviewer-add select {
+    max-width: 280px;
+  }
+}
+
+dialog#pull-request-details .pr-reviewers {
+  margin-top: var(--spacing-double);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-half);
+    margin: 0 0 var(--spacing);
+    font-size: var(--font-size);
+  }
+}
+
+// All the pull requests of a repository
+dialog#pull-request-list {
+  width: 640px;
+
+  .pr-list-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing);
+    padding: var(--spacing) var(--spacing-double);
+    border-bottom: var(--base-border);
+
+    .pr-list-search {
+      flex: 1 1 auto;
+    }
+  }
+
+  // A segmented control
+  .pr-list-filters {
+    display: inline-flex;
+    flex: 0 0 auto;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--box-alt-background-color);
+
+    .button-component {
+      height: 24px;
+      padding: 0 12px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      box-shadow: none;
+
+      &.selected {
+        background: var(--background-color);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        font-weight: var(--font-weight-semibold);
+      }
+    }
+  }
+
+  .pr-list-refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    padding: 0;
+  }
+
+  .dialog-content {
+    height: min(480px, calc(100vh - 260px));
+    padding: 0;
+    overflow-y: auto;
+  }
+
+  .pr-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li + li {
+      box-shadow: inset 0 1px 0 var(--box-border-color);
+    }
+  }
+
+  .pr-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing);
+    width: 100%;
+    padding: 10px var(--spacing-double);
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--box-hover-background-color);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--ms-accent);
+      outline-offset: -2px;
+    }
+  }
+
+  .pr-list-icon {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--color-new);
+
+    &.draft {
+      color: var(--text-secondary-color);
+    }
+
+    &.closed {
+      color: var(--color-deleted);
+    }
+
+    &.merged {
+      color: #8250df;
+    }
+  }
+
+  .pr-list-info {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .pr-list-title {
+    overflow: hidden;
+    font-weight: var(--font-weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pr-list-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary-color);
+  }
+
+  .pr-list-branches {
+    font-family: var(--font-family-monospace);
+  }
+
+  .pr-list-reviewers {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 3px;
+    margin-top: 2px;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary-color);
+  }
+
+  .pr-list-empty {
+    padding: var(--spacing-double);
+    color: var(--text-secondary-color);
+    text-align: center;
+  }
+
+  .pr-list-more {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing);
+  }
+
+  .dialog-footer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    .octicon {
+      margin-right: var(--spacing-half);
+    }
+  }
+}

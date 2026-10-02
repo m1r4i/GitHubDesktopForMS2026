@@ -231,6 +231,7 @@ import { WorktreeEntry } from '../models/worktree'
 import { shouldShowWorktreeDropdown } from '../lib/worktree-dropdown'
 import { TeamBar } from './team-bar/team-bar'
 import { PullRequestDetailsDialog } from './pull-request-details/pull-request-details-dialog'
+import { PullRequestListDialog } from './pull-request-list/pull-request-list-dialog'
 import { isGiteaEndpoint } from '../lib/gitea'
 
 const MinuteInMilliseconds = 1000 * 60
@@ -537,6 +538,8 @@ export class App extends React.Component<IAppProps, IAppState> {
         return this.openPullRequest()
       case 'preview-pull-request':
         return this.startPullRequest()
+      case 'show-pull-request-list':
+        return this.showPullRequestList()
       case 'install-darwin-cli':
         return this.props.dispatcher.installDarwinCLI()
       case 'install-windows-cli':
@@ -2631,6 +2634,22 @@ export class App extends React.Component<IAppProps, IAppState> {
           />
         )
       }
+      case PopupType.PullRequestList: {
+        return (
+          <PullRequestListDialog
+            key="pull-request-list"
+            dispatcher={this.props.dispatcher}
+            repository={popup.repository}
+            account={getAccountForRepository(
+              this.state.accounts,
+              popup.repository
+            )}
+            owner={popup.owner}
+            name={popup.name}
+            onDismissed={onPopupDismissedFn}
+          />
+        )
+      }
       case PopupType.CICheckRunRerun: {
         return (
           <CICheckRunRerunDialog
@@ -3766,6 +3785,16 @@ export class App extends React.Component<IAppProps, IAppState> {
     } else {
       dispatcher.showPullRequest(state.repository)
     }
+  }
+
+  private showPullRequestList = () => {
+    const state = this.state.selectedState
+
+    if (state == null || state.type !== SelectionType.Repository) {
+      return
+    }
+
+    this.props.dispatcher.showPullRequestList(state.repository)
   }
 
   private startPullRequest = () => {

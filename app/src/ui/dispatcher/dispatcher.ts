@@ -2502,18 +2502,30 @@ export class Dispatcher {
     repository: Repository,
     baseBranch: Branch,
     title: string,
-    body: string
+    body: string,
+    reviewers: ReadonlyArray<string> = []
   ) {
     return this.appStore._createPullRequestInApp(
       repository,
       baseBranch,
       title,
-      body
+      body,
+      reviewers
     )
   }
 
   public showPullRequest(repository: Repository): Promise<void> {
     return this.appStore._showPullRequest(repository)
+  }
+
+  /** Show all the pull requests of the repository. */
+  public showPullRequestList(repository: Repository): Promise<void> {
+    return this.appStore._showPullRequestList(repository)
+  }
+
+  /** The users who can be asked to review pull requests in the repository. */
+  public fetchReviewerCandidates(repository: Repository) {
+    return this.appStore._fetchReviewerCandidates(repository)
   }
 
   /**

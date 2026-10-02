@@ -91,6 +91,7 @@ export enum PopupType {
   SSHUserPassword = 'SSHUserPassword',
   PullRequestChecksFailed = 'PullRequestChecksFailed',
   PullRequestDetails = 'PullRequestDetails',
+  PullRequestList = 'PullRequestList',
   CICheckRunRerun = 'CICheckRunRerun',
   WarnForcePush = 'WarnForcePush',
   DiscardChangesRetry = 'DiscardChangesRetry',
@@ -417,6 +418,14 @@ export type PopupDetail =
       /** The name of the repository the pull request was opened against */
       name: string
       pullRequestNumber: number
+    }
+  | {
+      type: PopupType.PullRequestList
+      repository: RepositoryWithGitHubRepository
+      /** The owner of the repository whose pull requests are shown */
+      owner: string
+      /** The name of the repository whose pull requests are shown */
+      name: string
     }
   | {
       type: PopupType.CICheckRunRerun

@@ -540,6 +540,13 @@ export function buildDefaultMenuTemplate({
     click: emit('open-pull-request'),
   })
 
+  branchSubmenu.push({
+    label: __DARWIN__ ? 'Show All Pull Requests' : 'Show all pull requests',
+    id: 'show-pull-request-list',
+    accelerator: 'CmdOrCtrl+Alt+L',
+    click: emit('show-pull-request-list'),
+  })
+
   template.push({
     label: __DARWIN__ ? 'Branch' : '&Branch',
     id: 'branch',

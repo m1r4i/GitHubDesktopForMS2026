@@ -1,7 +1,9 @@
 import * as React from 'react'
 import {
   API,
+  IAPIIdentity,
   IAPIPullRequestDetails,
+  IAPIPullRequestReview,
   PullRequestMergeMethod,
 } from '../../lib/api'
 import { getPullRequestURL } from '../../lib/gitea'
@@ -21,6 +23,11 @@ import { Ref } from '../lib/ref'
 import { Select } from '../lib/select'
 import { Octicon } from '../octicons'
 import * as octicons from '../octicons/octicons.generated'
+import { getReviewers, ReviewerPicker } from './reviewer-picker'
+import {
+  getPullRequestStatus,
+  pullRequestStatusLabels,
+} from './pull-request-status'
 
 interface IPullRequestDetailsDialogProps {
   readonly dispatcher: Dispatcher
@@ -38,6 +45,9 @@ interface IPullRequestDetailsDialogProps {
 
 interface IPullRequestDetailsDialogState {
   readonly pullRequest: IAPIPullRequestDetails | null
+  readonly reviews: ReadonlyArray<IAPIPullRequestReview>
+  /** The users who can be asked to review, null while loading */
+  readonly reviewerCandidates: ReadonlyArray<IAPIIdentity> | null
   readonly loading: boolean
   readonly busy: boolean
   readonly error: string | null
@@ -45,29 +55,13 @@ interface IPullRequestDetailsDialogState {
   readonly deleteBranch: boolean
 }
 
-type PullRequestStatus = 'open' | 'draft' | 'merged' | 'closed'
-
 const mergeMethodLabels: Record<PullRequestMergeMethod, string> = {
   merge: 'マージコミットを作成',
   squash: 'スカッシュしてマージ',
   rebase: 'リベースしてマージ',
 }
 
-function getStatus(pr: IAPIPullRequestDetails): PullRequestStatus {
-  if (pr.merged) {
-    return 'merged'
-  } else if (pr.state === 'closed') {
-    return 'closed'
-  }
-  return pr.draft ? 'draft' : 'open'
-}
-
-const statusLabels: Record<PullRequestStatus, string> = {
-  open: 'オープン',
-  draft: '下書き',
-  merged: 'マージ済み',
-  closed: 'クローズ',
-}
+const getStatus = getPullRequestStatus
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : `${e}`)
 
@@ -85,6 +79,8 @@ export class PullRequestDetailsDialog extends React.Component<
     super(props)
     this.state = {
       pullRequest: null,
+      reviews: [],
+      reviewerCandidates: null,
       loading: true,
       busy: false,
       error: null,
@@ -117,21 +113,110 @@ export class PullRequestDetailsDialog extends React.Component<
       return
     }
 
+    const { owner, name, pullRequestNumber } = this.props
+
+    // Reviews and reviewers are extras, don't fail when they can't be loaded
+    api
+      .fetchReviewerCandidates(owner, name)
+      .catch(e => {
+        log.warn('Failed to load the reviewer candidates', e)
+        return []
+      })
+      .then(reviewerCandidates => {
+        if (this.mounted) {
+          this.setState({ reviewerCandidates })
+        }
+      })
+
     try {
-      const { owner, name, pullRequestNumber } = this.props
-      const pullRequest = await api.fetchPullRequestDetails(
-        owner,
-        name,
-        pullRequestNumber
-      )
+      const [pullRequest, reviews] = await Promise.all([
+        api.fetchPullRequestDetails(owner, name, pullRequestNumber),
+        this.fetchReviews(api),
+      ])
       if (this.mounted) {
-        this.setState({ pullRequest, loading: false })
+        this.setState({ pullRequest, reviews, loading: false })
       }
     } catch (e) {
       if (this.mounted) {
         this.setState({ loading: false, error: errorMessage(e) })
       }
     }
+  }
+
+  private fetchReviews(api: API) {
+    const { owner, name, pullRequestNumber } = this.props
+    return api
+      .fetchAllPullRequestReviews(owner, name, pullRequestNumber)
+      .catch(e => {
+        log.warn('Failed to load the pull request reviews', e)
+        return []
+      })
+  }
+
+  /** Add or remove a reviewer and show the result */
+  private async changeReviewers(add: boolean, login: string) {
+    const { api } = this
+    if (api === null) {
+      return
+    }
+
+    this.setState({ busy: true, error: null })
+    const { owner, name, pullRequestNumber } = this.props
+    try {
+      if (add) {
+        await api.requestReviewers(owner, name, pullRequestNumber, [login])
+      } else {
+        await api.removeRequestedReviewers(owner, name, pullRequestNumber, [
+          login,
+        ])
+      }
+      const [pullRequest, reviews] = await Promise.all([
+        api.fetchPullRequestDetails(owner, name, pullRequestNumber),
+        this.fetchReviews(api),
+      ])
+      if (this.mounted) {
+        this.setState({ pullRequest, reviews, busy: false })
+      }
+    } catch (e) {
+      if (this.mounted) {
+        this.setState({
+          busy: false,
+          error: `レビュワーを変更できませんでした: ${errorMessage(e)}`,
+        })
+      }
+    }
+  }
+
+  private onAddReviewer = (login: string) => this.changeReviewers(true, login)
+
+  private onRemoveReviewer = (login: string) =>
+    this.changeReviewers(false, login)
+
+  private renderReviewers(pr: IAPIPullRequestDetails, isOpen: boolean) {
+    const { reviews, reviewerCandidates, busy } = this.state
+    const reviewers = getReviewers(
+      pr.user.login,
+      reviews,
+      pr.requested_reviewers ?? []
+    )
+
+    return (
+      <div className="pr-reviewers">
+        <h3>
+          <Octicon symbol={octicons.people} />
+          レビュワー
+        </h3>
+        <ReviewerPicker
+          reviewers={reviewers}
+          candidates={
+            reviewerCandidates?.filter(c => c.login !== pr.user.login) ?? null
+          }
+          onAdd={isOpen ? this.onAddReviewer : undefined}
+          onRemove={isOpen ? this.onRemoveReviewer : undefined}
+          disabled={busy}
+        />
+      </div>
+    )
   }
 
   /** The branch to delete after merging, if it lives in the same repository */
@@ -306,7 +391,9 @@ export class PullRequestDetailsDialog extends React.Component<
     return (
       <>
         <div className="pr-meta">
-          <span className={`pr-status ${status}`}>{statusLabels[status]}</span>
+          <span className={`pr-status ${status}`}>
+            {pullRequestStatusLabels[status]}
+          </span>
           <span className="pr-author">{pullRequest.user.login}</span>
           <span className="pr-branches">
             <Ref>{pullRequest.head.ref}</Ref>
@@ -321,6 +408,10 @@ export class PullRequestDetailsDialog extends React.Component<
             <span className="pr-body-empty">説明はありません。</span>
           )}
         </div>
+        {this.renderReviewers(
+          pullRequest,
+          status === 'open' || status === 'draft'
+        )}
         {status === 'open' || status === 'draft'
           ? this.renderMergeOptions(pullRequest)
           : null}

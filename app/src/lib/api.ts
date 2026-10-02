@@ -664,7 +664,31 @@ export interface IAPIPullRequestDetails extends IAPIPullRequest {
   /** Whether the pull request can be merged, null while being computed */
   readonly mergeable?: boolean | null
   readonly merged?: boolean
+  /** When the pull request was merged (also present in lists) */
+  readonly merged_at?: string | null
   readonly html_url?: string
+  /** Users asked to review the pull request who haven't reviewed it yet */
+  readonly requested_reviewers?: ReadonlyArray<IAPIIdentity> | null
+}
+
+/** Which pull requests to list, see API.fetchPullRequestsPage */
+export type PullRequestListState = 'open' | 'closed' | 'all'
+
+/**
+ * The state of a review normalized between GitHub and Gitea, which calls
+ * them REQUEST_CHANGES, COMMENT and REQUEST_REVIEW (a pending request).
+ */
+function normalizeReviewState(state: string): IAPIPullRequestReview['state'] {
+  switch (state) {
+    case 'REQUEST_CHANGES':
+      return 'CHANGES_REQUESTED'
+    case 'COMMENT':
+      return 'COMMENTED'
+    case 'REQUEST_REVIEW':
+      return 'PENDING'
+    default:
+      return state as IAPIPullRequestReview['state']
+  }
 }
 
 /** How to merge a pull request */
@@ -1416,6 +1440,81 @@ export class API {
         log.warn(`mergePullRequest: unable to delete branch ${deleteBranch}`)
       }
     }
+  }
+
+  /**
+   * Fetch a page of the pull requests in a repository, most recently updated
+   * first.
+   */
+  public async fetchPullRequestsPage(
+    owner: string,
+    name: string,
+    state: PullRequestListState,
+    page: number,
+    perPage = 30
+  ): Promise<ReadonlyArray<IAPIPullRequestDetails>> {
+    const url = urlWithQueryString(`repos/${owner}/${name}/pulls`, {
+      state,
+      page: `${page}`,
+      ...(this.isGitea
+        ? { limit: `${perPage}`, sort: 'recentupdate' }
+        : { per_page: `${perPage}`, sort: 'updated', direction: 'desc' }),
+    })
+    const response = await this.ghRequest('GET', url, { reloadCache: true })
+    const prs = await parsedResponse<IAPIPullRequestDetails[]>(response)
+    return this.isGitea
+      ? prs.map(pr => ({ ...pr, ...this.normalizeGiteaPullRequest(pr) }))
+      : prs
+  }
+
+  /** The users who can be asked to review pull requests in a repository. */
+  public async fetchReviewerCandidates(
+    owner: string,
+    name: string
+  ): Promise<ReadonlyArray<IAPIIdentity>> {
+    return this.fetchAll<IAPIIdentity>(`repos/${owner}/${name}/assignees`)
+  }
+
+  /** All the reviews of a pull request, oldest first. */
+  public async fetchAllPullRequestReviews(
+    owner: string,
+    name: string,
+    prNumber: number
+  ): Promise<ReadonlyArray<IAPIPullRequestReview>> {
+    const reviews = await this.fetchAll<IAPIPullRequestReview>(
+      `repos/${owner}/${name}/pulls/${prNumber}/reviews`
+    )
+    return reviews.map(r => ({ ...r, state: normalizeReviewState(r.state) }))
+  }
+
+  /** Ask users to review a pull request. */
+  public async requestReviewers(
+    owner: string,
+    name: string,
+    prNumber: number,
+    logins: ReadonlyArray<string>
+  ): Promise<void> {
+    const response = await this.ghRequest(
+      'POST',
+      `repos/${owner}/${name}/pulls/${prNumber}/requested_reviewers`,
+      { body: { reviewers: logins } }
+    )
+    await ensureSuccessfulResponse(response)
+  }
+
+  /** Withdraw review requests from a pull request. */
+  public async removeRequestedReviewers(
+    owner: string,
+    name: string,
+    prNumber: number,
+    logins: ReadonlyArray<string>
+  ): Promise<void> {
+    const response = await this.ghRequest(
+      'DELETE',
+      `repos/${owner}/${name}/pulls/${prNumber}/requested_reviewers`,
+      { body: { reviewers: logins } }
+    )
+    await ensureSuccessfulResponse(response)
   }
 
   /** Close a pull request without merging it. */

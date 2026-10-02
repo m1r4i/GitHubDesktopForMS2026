@@ -133,6 +133,7 @@ const phrases: Record<string, string> = {
   'Preview pull request': 'プルリクエストをプレビュー',
   'Create pull request': 'プルリクエストを作成',
   'View pull request': 'プルリクエストを表示',
+  'Show all pull requests': 'すべてのプルリクエストを表示',
   'Report issue': '問題を報告',
   'Contact GitHub support': 'GitHub サポートに問い合わせる',
   'Show user guides': 'ユーザーガイドを表示',

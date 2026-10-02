@@ -288,6 +288,18 @@ export class NoChanges extends React.Component<
       : getHostingServiceName(gitHubRepository.endpoint)
   }
 
+  private renderPullRequestList() {
+    if (this.props.repository.gitHubRepository === null) {
+      return null
+    }
+
+    return this.renderMenuBackedAction(
+      'show-pull-request-list',
+      'リポジトリのプルリクエスト',
+      'ブランチに関係なく、すべてのプルリクエストを確認してレビュワーの設定やマージができます。'
+    )
+  }
+
   private renderViewOnGitHub() {
     const isGitHub = this.props.repository.gitHubRepository !== null
 
@@ -761,6 +773,7 @@ export class NoChanges extends React.Component<
           {this.renderViewStashAction() || this.renderRemoteAction()}
         </SuggestedActionGroup>
         <SuggestedActionGroup>
+          {this.renderPullRequestList()}
           {this.renderOpenInExternalEditor()}
           {this.renderShowInFileManager()}
           {this.renderViewOnGitHub()}

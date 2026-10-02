@@ -88,6 +88,36 @@ const phrases: Record<string, string> = {
   変更内容やレビューしてほしい点など:
     'What changed, and what reviewers should look at',
   'マージ後にブランチ {0} を削除する': 'Delete branch {0} after merging',
+  クローズ済み: 'Closed',
+
+  // Reviewers
+  レビュワー: 'Reviewers',
+  レビュー待ち: 'Awaiting review',
+  レビュー中: 'Reviewing',
+  承認: 'Approved',
+  変更を要求: 'Changes requested',
+  コメント: 'Commented',
+  却下: 'Dismissed',
+  レビュワーから外す: 'Remove reviewer',
+  'レビュワーを追加…': 'Add reviewer…',
+  レビュワーを追加: 'Add reviewer',
+  追加できるユーザーはいません: 'No one else can be added',
+  'レビュワーはいません。': 'No reviewers.',
+
+  // All pull requests
+  すべて: 'All',
+  'タイトル、番号、作成者で絞り込む': 'Filter by title, number or author',
+  プルリクエストを絞り込む: 'Filter pull requests',
+  再読み込み: 'Reload',
+  '更新 {0}': 'Updated {0}',
+  さらに読み込む: 'Load more',
+  '一致するプルリクエストはありません。': 'No matching pull requests.',
+  'プルリクエストはありません。': 'No pull requests.',
+  'オープンのプルリクエストはありません。': 'No open pull requests.',
+  'クローズ済みのプルリクエストはありません。': 'No closed pull requests.',
+  リポジトリのプルリクエスト: 'Repository pull requests',
+  'ブランチに関係なく、すべてのプルリクエストを確認してレビュワーの設定やマージができます。':
+    'See every pull request regardless of branch, set reviewers and merge.',
   'このリポジトリはホスティングサービスに接続されていません。':
     "This repository isn't connected to a hosting service.",
   'このリポジトリのアカウントが見つかりません。設定 > Accounts から追加してください。':
@@ -135,6 +165,12 @@ const phrases: Record<string, string> = {
 const patterns: ReadonlyArray<TranslationPattern> = [
   [/^プルリクエスト #(\d+) を確認する$/, 'Review pull request #$1'],
   [/^プルリクエスト #(\d+)$/, 'Pull request #$1'],
+  [/^プルリクエスト · (.+)$/, 'Pull requests · $1'],
+  [/^(.+) をレビュワーから外す$/, 'Remove $1 as a reviewer'],
+  [
+    /^レビュワーを変更できませんでした: (.*)$/,
+    "Couldn't change the reviewers: $1",
+  ],
   [/^マージできませんでした: (.*)$/, "Couldn't merge: $1"],
   [/^クローズできませんでした: (.*)$/, "Couldn't close: $1"],
   [

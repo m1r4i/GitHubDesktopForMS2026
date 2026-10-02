@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { IConstrainedValue, IPullRequestState } from '../../lib/app-state'
-import { getDotComAPIEndpoint } from '../../lib/api'
+import { getDotComAPIEndpoint, IAPIIdentity } from '../../lib/api'
 import { isGiteaEndpoint } from '../../lib/gitea'
 import { Branch } from '../../models/branch'
 import { ImageDiffType } from '../../models/diff'
@@ -29,6 +29,7 @@ import {
 import { PullRequestFilesChanged } from './pull-request-files-changed'
 import { PullRequestMergeStatus } from './pull-request-merge-status'
 import { ComputedAction } from '../../models/computed-action'
+import { ReviewerPicker } from '../pull-request-details/reviewer-picker'
 
 interface IOpenPullRequestDialogProps {
   readonly repository: Repository
@@ -101,6 +102,10 @@ interface IOpenPullRequestDialogProps {
 interface IOpenPullRequestDialogState {
   readonly title: string
   readonly body: string
+  /** The logins of the users to ask for a review */
+  readonly reviewers: ReadonlyArray<string>
+  /** The users who can be asked to review, null while loading */
+  readonly reviewerCandidates: ReadonlyArray<IAPIIdentity> | null
   readonly creating: boolean
   readonly error: string | null
 }
@@ -118,6 +123,8 @@ export class OpenPullRequestDialog extends React.Component<
       // Suggest the branch name as the title
       title: props.currentBranch.nameWithoutRemote,
       body: '',
+      reviewers: [],
+      reviewerCandidates: null,
       creating: false,
       error: null,
     }
@@ -125,6 +132,20 @@ export class OpenPullRequestDialog extends React.Component<
 
   public componentDidMount() {
     this.mounted = true
+
+    if (this.canCreateInApp && !this.props.currentBranchHasPullRequest) {
+      this.props.dispatcher
+        .fetchReviewerCandidates(this.props.repository)
+        .catch(e => {
+          log.warn('Failed to load the reviewer candidates', e)
+          return []
+        })
+        .then(reviewerCandidates => {
+          if (this.mounted) {
+            this.setState({ reviewerCandidates })
+          }
+        })
+    }
   }
 
   public componentWillUnmount() {
@@ -158,7 +179,8 @@ export class OpenPullRequestDialog extends React.Component<
         repository,
         baseBranch,
         this.state.title.trim(),
-        this.state.body
+        this.state.body,
+        this.state.reviewers
       )
       dispatcher.incrementMetric('createPullRequestFromPreviewCount')
       onDismissed()
@@ -199,12 +221,22 @@ export class OpenPullRequestDialog extends React.Component<
     this.setState({ body })
   }
 
+  private onAddReviewer = (login: string) => {
+    this.setState(state => ({ reviewers: [...state.reviewers, login] }))
+  }
+
+  private onRemoveReviewer = (login: string) => {
+    this.setState(state => ({
+      reviewers: state.reviewers.filter(r => r !== login),
+    }))
+  }
+
   private renderForm() {
     if (this.props.currentBranchHasPullRequest || !this.canCreateInApp) {
       return null
     }
 
-    const { title, body, creating } = this.state
+    const { title, body, creating, reviewers, reviewerCandidates } = this.state
 
     return (
       <div className="open-pull-request-form">
@@ -222,6 +254,13 @@ export class OpenPullRequestDialog extends React.Component<
           disabled={creating}
           rows={3}
           placeholder="変更内容やレビューしてほしい点など"
+        />
+        <ReviewerPicker
+          reviewers={reviewers.map(login => ({ login, state: 'selected' }))}
+          candidates={reviewerCandidates}
+          onAdd={this.onAddReviewer}
+          onRemove={this.onRemoveReviewer}
+          disabled={creating}
         />
       </div>
     )
