@@ -154,6 +154,7 @@ import {
   getPullRequestURL,
   isGiteaEndpoint,
 } from '../gitea'
+import { getLanguage, onLanguageChanged } from '../i18n/language'
 import { shell } from '../app-shell'
 import {
   CompareAction,
@@ -820,6 +821,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
     this.wireupIpcEventHandlers()
     this.wireupStoreEventHandlers()
     getAppMenu()
+    onLanguageChanged(() => this.updateMenuLabelsForSelectedRepository())
     this.tutorialAssessor = new OnboardingTutorialAssessor(
       this.getResolvedExternalEditor
     )
@@ -2907,6 +2909,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
     } = this
 
     const labels: MenuLabelsEvent = {
+      language: getLanguage(),
       selectedShell: useCustomShell ? null : selectedShell,
       selectedExternalEditor: useCustomEditor ? null : selectedExternalEditor,
       askForConfirmationOnRepositoryRemoval,

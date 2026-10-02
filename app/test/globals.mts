@@ -1,5 +1,9 @@
 import 'fake-indexeddb/auto'
 import 'global-jsdom/register'
+
+// MS2026 Desktop is shown in Japanese by default, but the tests from GitHub
+// Desktop expect English, e.g. for relative dates. See app/src/lib/i18n.
+localStorage.setItem('ms2026-language', 'en')
 import { mock } from 'node:test'
 
 // These constants are defined by Webpack at build time, but since tests aren't

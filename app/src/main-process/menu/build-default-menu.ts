@@ -12,6 +12,16 @@ import { MenuLabelsEvent } from '../../models/menu-labels'
 import * as ipcWebContents from '../ipc-webcontents'
 import { mkdir } from 'fs/promises'
 import { buildTestMenu } from './build-test-menu'
+import {
+  defaultLanguage,
+  Language,
+  translateMenuTemplate,
+} from '../../lib/i18n/translate'
+
+let menuLanguage: Language = defaultLanguage
+
+/** The language of the application menu, also used for context menus. */
+export const getMenuLanguage = () => menuLanguage
 
 const createPullRequestLabel = __DARWIN__
   ? 'Create Pull Request'
@@ -37,7 +47,14 @@ export const separator: Electron.MenuItemConstructorOptions = {
 }
 
 export function buildDefaultMenu(params: MenuLabelsEvent): Electron.Menu {
-  return Menu.buildFromTemplate(buildDefaultMenuTemplate(params))
+  menuLanguage = params.language ?? defaultLanguage
+  return Menu.buildFromTemplate(
+    translateMenuTemplate(
+      buildDefaultMenuTemplate(params),
+      menuLanguage,
+      __APP_NAME__
+    )
+  )
 }
 
 export function buildDefaultMenuTemplate({

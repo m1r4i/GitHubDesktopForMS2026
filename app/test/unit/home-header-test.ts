@@ -12,6 +12,10 @@ describe('home header', () => {
     assert.equal(formatHomeDate(date), '9月30日 水曜日')
   })
 
+  it('formats the date in English', () => {
+    assert.equal(formatHomeDate(date, 'en'), 'Wednesday, September 30')
+  })
+
   it('formats the time as 24 hour HH:mm', () => {
     assert.equal(formatHomeTime(date), '09:05')
     assert.equal(formatHomeTime(new Date(2026, 8, 30, 21, 45)), '21:45')

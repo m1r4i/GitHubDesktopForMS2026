@@ -1,4 +1,6 @@
 import { invokeContextualMenu } from '../ui/main-process-proxy'
+import { getLanguage } from './i18n/language'
+import { translateMenuLabel } from './i18n/translate'
 
 export interface IMenuItem {
   /** The user-facing label. */
@@ -106,6 +108,10 @@ function serializeMenuItems(
 ): ReadonlyArray<ISerializableMenuItem> {
   return items.map(item => ({
     ...item,
+    label:
+      item.label === undefined
+        ? undefined
+        : translateMenuLabel(item.label, getLanguage()),
     action: undefined,
     submenu: item.submenu ? serializeMenuItems(item.submenu) : undefined,
   }))

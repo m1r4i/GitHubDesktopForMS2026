@@ -41,7 +41,11 @@ function formatMenuItemLabel(text: string) {
     // character. A literal ampersand is escaped by putting another ampersand
     // in front of it (&&). Here we strip single ampersands and unescape
     // double ampersands. Example: "&Push && Pull" becomes "Push & Pull".
-    return text.replace(/&?&/g, m => (m.length > 1 ? '&' : ''))
+    // Translated labels show the access key in parentheses, e.g.
+    // "プッシュ(&U)", which isn't useful outside of the menu.
+    return text
+      .replace(/\(&[^&)]\)/g, '')
+      .replace(/&?&/g, m => (m.length > 1 ? '&' : ''))
   }
 
   return text

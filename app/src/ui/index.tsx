@@ -71,6 +71,9 @@ import * as ipcRenderer from '../lib/ipc-renderer'
 import { migrateRendererGUID } from '../lib/get-renderer-guid'
 import { initializeRendererNotificationHandler } from '../lib/notifications/notification-handler'
 import { Grid } from 'react-virtualized'
+import { DOMTranslator } from './lib/dom-translator'
+import { getLanguage, onLanguageChanged } from '../lib/i18n/language'
+import { Language } from '../lib/i18n/translate'
 import { NotificationsDebugStore } from '../lib/stores/notifications-debug-store'
 import { trampolineServer } from '../lib/trampoline/trampoline-server'
 import { TrampolineCommandIdentifier } from '../lib/trampoline/trampoline-command'
@@ -416,6 +419,19 @@ ipcRenderer.on('cli-action', (_, action) =>
     delete types?.[k]
   })
 })(Grid.defaultProps, Grid.propTypes)
+
+// The user interface is written in English (and partly in Japanese) and
+// translated into the selected language as it's rendered, see lib/i18n.
+const translator = new DOMTranslator(document.body, getLanguage())
+const setDocumentLanguage = (language: Language) =>
+  (document.documentElement.lang = language)
+
+setDocumentLanguage(getLanguage())
+translator.start()
+onLanguageChanged(language => {
+  setDocumentLanguage(language)
+  translator.setLanguage(language)
+})
 
 ReactDOM.render(
   <App

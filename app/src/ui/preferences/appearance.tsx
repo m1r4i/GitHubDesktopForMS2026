@@ -22,6 +22,12 @@ import {
   numberFormatToKey,
 } from '../../models/formatting-preferences'
 import { formatNumber } from '../../lib/format-number'
+import {
+  getLanguage,
+  languageOptions,
+  setLanguage,
+} from '../../lib/i18n/language'
+import { Language } from '../../lib/i18n/translate'
 
 interface IAppearanceProps {
   readonly selectedTheme: ApplicationTheme
@@ -43,6 +49,7 @@ interface IAppearanceProps {
 interface IAppearanceState {
   readonly selectedTheme: ApplicationTheme | null
   readonly selectedTabSize: number
+  readonly language: Language
 }
 
 export class Appearance extends React.Component<
@@ -59,6 +66,7 @@ export class Appearance extends React.Component<
     this.state = {
       selectedTheme: usePropTheme ? props.selectedTheme : null,
       selectedTabSize: props.selectedTabSize,
+      language: getLanguage(),
     }
 
     if (!usePropTheme) {
@@ -92,6 +100,16 @@ export class Appearance extends React.Component<
 
   private onSelectedThemeChanged = (theme: ApplicationTheme) => {
     this.props.onSelectedThemeChanged(theme)
+  }
+
+  private onLanguageChanged = (event: React.FormEvent<HTMLSelectElement>) => {
+    const { value } = event.currentTarget
+    const option = languageOptions.find(o => o.language === value)
+    if (option !== undefined) {
+      // Like the theme, the language changes right away
+      setLanguage(option.language)
+      this.setState({ language: option.language })
+    }
   }
 
   private onSelectedTabSizeChanged = (
@@ -302,9 +320,30 @@ export class Appearance extends React.Component<
     )
   }
 
+  private renderLanguage() {
+    return (
+      <div className="appearance-section">
+        <h2 id="language-heading">Language</h2>
+
+        <Select
+          label="Display language"
+          value={this.state.language}
+          onChange={this.onLanguageChanged}
+        >
+          {languageOptions.map(o => (
+            <option key={o.language} value={o.language} translate="no">
+              {o.label}
+            </option>
+          ))}
+        </Select>
+      </div>
+    )
+  }
+
   public render() {
     return (
       <DialogContent>
+        {this.renderLanguage()}
         {this.renderSelectedTheme()}
         {this.renderFormatting()}
         {this.renderMiscellaneous()}
