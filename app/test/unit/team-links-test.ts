@@ -2,6 +2,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert'
 import {
   getTeamGreeting,
+  teamGreetings,
   teamGiteaServer,
   defaultTeamLinks as teamLinks,
   getTeamLinks,
@@ -11,6 +12,7 @@ import {
   teamLinkIconOptions,
 } from '../../src/lib/team-links'
 import { getGiteaAPIEndpoint, getHostingServiceName } from '../../src/lib/gitea'
+import { translate } from '../../src/lib/i18n/translate'
 
 const at = (hour: number) => new Date(2026, 3, 1, hour, 30)
 
@@ -46,12 +48,53 @@ describe('team-links', () => {
   })
 
   it('greets differently throughout the day', () => {
-    assert.match(getTeamGreeting(at(8)), /おはよう/)
-    assert.match(getTeamGreeting(at(12)), /お昼/)
-    assert.match(getTeamGreeting(at(15)), /コミット/)
-    assert.match(getTeamGreeting(at(20)), /おつかれ/)
-    assert.match(getTeamGreeting(at(2)), /夜更かし/)
-    assert.match(getTeamGreeting(at(23)), /夜更かし/)
+    // 2026-04-01 is a Wednesday
+    assert(teamGreetings.morning.includes(getTeamGreeting(at(8))))
+    assert(teamGreetings.noon.includes(getTeamGreeting(at(12))))
+    assert(teamGreetings.afternoon.includes(getTeamGreeting(at(15))))
+    assert(teamGreetings.evening.includes(getTeamGreeting(at(20))))
+    assert(teamGreetings.night.includes(getTeamGreeting(at(2))))
+    assert(teamGreetings.night.includes(getTeamGreeting(at(23))))
+  })
+
+  it('keeps the greeting during a time of day and varies it by day', () => {
+    assert.equal(
+      getTeamGreeting(new Date(2026, 3, 1, 15, 0)),
+      getTeamGreeting(new Date(2026, 3, 1, 17, 59))
+    )
+
+    const greetings = new Set<string>()
+    for (let day = 1; day <= 30; day++) {
+      greetings.add(getTeamGreeting(new Date(2026, 5, day, 15, 0)))
+    }
+    assert(greetings.size > 3)
+  })
+
+  it('has an English translation of every greeting', () => {
+    for (const greeting of Object.values(teamGreetings).flat()) {
+      assert.notEqual(translate(greeting, 'en'), null, greeting)
+    }
+  })
+
+  it('greets differently on special days', () => {
+    assert.equal(
+      getTeamGreeting(new Date(2026, 0, 1, 10)),
+      'あけましておめでとうございます'
+    )
+    // A Monday morning and a Friday evening
+    assert.equal(
+      getTeamGreeting(new Date(2026, 3, 6, 9)),
+      '今週もよろしくお願いします'
+    )
+    assert.equal(
+      getTeamGreeting(new Date(2026, 3, 10, 19)),
+      '今週もおつかれさまでした'
+    )
+    // A Saturday
+    assert.equal(
+      getTeamGreeting(new Date(2026, 3, 11, 14)),
+      '休日もおつかれさまです'
+    )
   })
 })
 

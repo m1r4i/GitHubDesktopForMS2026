@@ -1436,6 +1436,118 @@ const phrases: Record<string, string> = {
     'GitHub Copilot の実行ファイル (github.exe) を選択してください。',
   'Switch to manual': '手動に切り替え',
 
+  // Banners and updates
+  "Couldn't determine the last time an update check was performed. You may be running an old version. Please try manually checking for updates and contact GitHub Support if the problem persists":
+    '前回アップデートを確認した日時がわかりません。古いバージョンを使っている可能性があります。手動でアップデートを確認し、問題が続く場合はサポートに問い合わせてください',
+  'Check out the {0}': '{0}もお試しください',
+  'restart MS2026 Desktop': 'MS2026 Desktop を再起動',
+  "what's new": '新機能',
+  'important updates': '重要なアップデート',
+  'This version of MS2026 Desktop is missing {0}. Please {1} now to install pending updates.':
+    'この MS2026 Desktop には{0}が適用されていません。保留中のアップデートをインストールするには、今すぐ{1}してください。',
+  'An updated version of MS2026 Desktop is available and will be installed at the next launch. See {0} or {1}.':
+    '新しいバージョンの MS2026 Desktop があり、次回の起動時にインストールされます。{0}を確認するか、今すぐ{1}してください。',
+  'The Desktop team would like to thank you for your contributions. {0} {1} or {2} {3}':
+    'Desktop チームからあなたの貢献に感謝を込めて。{0} {1} または {2} {3}',
+  'See {0} for more information on managing large files on GitHub':
+    'GitHub での大きなファイルの管理については {0} を参照してください',
+  'MS2026 Desktop is unable to push commits to this branch because there are commits on the remote that are not present on your local branch. Fetch these new commits before pushing in order to reconcile them with your local commits.':
+    'リモートにローカルのブランチにないコミットがあるため、このブランチにプッシュできません。プッシュする前に新しいコミットをフェッチして、ローカルのコミットと統合してください。',
+  'Undoing a merge commit will apply the changes from the merge into your working directory, and committing again will create an entirely new commit. This means you will lose the merge commit and, as a result, commits from the merged branch could disappear from this branch.':
+    'マージコミットを元に戻すと、マージの変更が作業ディレクトリに戻り、再度コミットするとまったく新しいコミットになります。マージコミットは失われ、マージしたブランチのコミットがこのブランチから消える可能性があります。',
+
+  // Repositories and branches
+  'The Git repository appears to be owned by another user on your machine. Adding untrusted repositories may automatically execute files in the repository.':
+    'この Git リポジトリは、このマシンの別のユーザーが所有しているようです。信頼できないリポジトリを追加すると、リポジトリ内のファイルが自動で実行される可能性があります。',
+  'The Git repository appears to be owned by another user on your machine. Adding untrusted repositories may automatically execute files in the repository. If you trust the owner of the directory you can add an exception for this directory in order to continue.':
+    'この Git リポジトリは、このマシンの別のユーザーが所有しているようです。信頼できないリポジトリを追加すると、リポジトリ内のファイルが自動で実行される可能性があります。ディレクトリの所有者を信頼できる場合は、このディレクトリを例外に追加して続行できます。',
+  'If you trust the owner of the directory you can add an exception for this directory in order to continue.':
+    'ディレクトリの所有者を信頼できる場合は、このディレクトリを例外に追加して続行できます。',
+  'as determined by your {0}': '({0}による)',
+  'We will help you contribute to the {0} repository':
+    '{0} リポジトリへの貢献をお手伝いします',
+  'This will create a repository on your local machine, and push it to your account {0} on {1}. This repository will only be visible to you, and not visible publicly.':
+    'このマシンにリポジトリを作成し、アカウント {0} ({1}) にプッシュします。このリポジトリはあなただけが見られ、公開されません。',
+  'Clone {0}': '{0} をクローン',
+  'The compared branch ({0}) is up to date with your branch':
+    '比較しているブランチ ({0}) の変更はすべてあなたのブランチに含まれています',
+  'Your branch is up to date with the compared branch ({0})':
+    'あなたのブランチには比較しているブランチ ({0}) の変更がすべて含まれています',
+  '{0} not included.': '{0}は含まれていません。',
+  'Showing changes from {0}': '{0}の変更を表示しています',
+  'You can:': '次のことができます:',
+  'You contributed:': 'あなたの貢献:',
+  'Clone URL': 'クローン URL',
+  "I'll be using this fork": 'このフォークの用途',
+  'The repository {0} is a fork of {1}, but its {2} remote points elsewhere.':
+    'リポジトリ {0} は {1} のフォークですが、{2} リモートが別の場所を指しています。',
+  'Git LFS filters are already configured in {0} but are not the values it expects. Would you like to update them now?':
+    'Git LFS のフィルターは{0}で既に設定されていますが、期待される値ではありません。今すぐ更新しますか?',
+  'your global git config': 'グローバルの Git 設定',
+  'Git is configured to convert them': 'Git は変換するように設定されています',
+  'This is a submodule based on the repository {0}.':
+    'これはリポジトリ {0} をもとにしたサブモジュールです。',
+  'creating the fork manually on GitHub': 'GitHub で手動でフォークを作成',
+  'The email in your global Git config ({0})':
+    'グローバルの Git 設定のメールアドレス ({0})',
+  '{0} Confirm this address appears in your browser. Otherwise, cancel and contact your repository administrator.':
+    '{0} このアドレスがブラウザに表示されていることを確認してください。表示されていない場合は、キャンセルしてリポジトリの管理者に連絡してください。',
+  '{0} Continue': '{0} 続行',
+  '{0} Select a base branch above.':
+    '{0} 上でベースブランチを選択してください。',
+  'Checking mergeability…': 'マージできるか確認しています…',
+  'Experience agent-driven development built natively on GitHub. {0}.':
+    'GitHub 上に構築されたエージェント駆動の開発を体験しましょう。{0}',
+  'Allows the display of notifications when high-signal events take place in the current repository.{0}':
+    '現在のリポジトリで重要なイベントが起きたときに通知を表示します。{0}',
+  '{0} MS2026 Desktop has no permission to display notifications. Please, enable them in the {1}.':
+    '{0} MS2026 Desktop には通知を表示する権限がありません。{1}で有効にしてください。',
+  'When enabled, MS2026 Desktop will attempt to load environment variables from your shell when executing Git hooks. This is useful if your Git hooks depend on environment variables set in your shell configuration files, a common practice for version managers such as nvm, rbenv, asdf, etc.':
+    '有効にすると、Git フックの実行時にシェルから環境変数を読み込みます。nvm、rbenv、asdf などのバージョン管理ツールのように、シェルの設定ファイルで設定した環境変数にフックが依存している場合に便利です。',
+  '{0} found secret(s) in the commit(s) you attempted to push.':
+    'プッシュしようとしたコミットに、{0}がシークレットを検出しました。',
+  'Allowing secrets risks exposure. Consider {0}':
+    'シークレットを許可すると漏えいのおそれがあります。{0}を検討してください',
+  'removing the secret from your commit and commit history.':
+    'コミットとコミット履歴からシークレットを削除すること',
+  '{0} {1} Exposing this secret can allow someone to: {2} {3}':
+    '{0} {1} このシークレットが漏れると、次のことができてしまいます: {2} {3}',
+  "These users weren't found and won't be added as co-authors of this commit. Are you sure you want to commit?":
+    'これらのユーザーは見つからなかったため、このコミットの共同作成者に追加されません。コミットしてもよろしいですか?',
+  'The push was rejected by the server for containing a modification to the workflow file {0}. In order to be able to push to workflow files GitHub Desktop needs to request additional permissions.':
+    'ワークフローファイル {0} の変更が含まれているため、サーバーにプッシュを拒否されました。ワークフローファイルにプッシュするには、追加の権限を要求する必要があります。',
+  '{0} Sign in to GitHub.com': '{0} GitHub.com にサインイン',
+  'Diff: {0}': '差分: {0}',
+  'Common reasons are: {0}': '主な原因: {0}',
+
+  // Tutorial
+  'It doesn’t look like you have a text editor installed. We can recommend {0} or {1}, but feel free to use any.':
+    'テキストエディターがインストールされていないようです。{0} や {1} がおすすめですが、どれを使ってもかまいません。',
+  'Your default editor is {0}. You can change your preferred editor in {1}':
+    '既定のエディターは {0} です。使うエディターは{1}で変更できます',
+  'Open this repository in your preferred text editor. Edit the {0} file, save it, and come back.':
+    'このリポジトリを好きなテキストエディターで開き、{0} ファイルを編集して保存したら戻ってきてください。',
+  'A commit allows you to save sets of changes. In the “summary“ field in the bottom left, write a short message that describes the changes you made. When you’re done, click the blue Commit button to finish.':
+    'コミットを使うと、一連の変更を保存できます。左下の「概要」欄に変更内容を表す短いメッセージを書き、青いコミットボタンをクリックすれば完了です。',
+  'A pull request allows you to propose changes to the code. By opening one, you’re requesting that someone review and merge them. Since this is a demo repository, this pull request will be private.':
+    'プルリクエストを使うと、コードの変更を提案できます。作成すると、誰かにレビューとマージを依頼することになります。これはデモ用のリポジトリなので、このプルリクエストは非公開です。',
+  'Make a branch': 'ブランチを作る',
+  'Publishing will “push”, or upload, your commits to this branch of your repository on GitHub. Publish using the third button in the top bar.':
+    '公開すると、コミットが GitHub 上のリポジトリのこのブランチに「プッシュ」(アップロード) されます。上部バーの 3 番目のボタンで公開します。',
+
+  // Image descriptions
+  'Hands clapping': '拍手する手',
+  'People with discussion bubbles overhead': '話し合う人々',
+  'Server stack with cloud': 'クラウドとサーバー',
+  'Html syntax icon': 'HTML のアイコン',
+  'Pull request markdown body': 'プルリクエストの本文',
+  'Pull request markdown comment': 'プルリクエストのコメント',
+  'Release notes generated from markdown': 'リリースノート',
+  'Revert progress button': '取り消しの進行状況ボタン',
+  'Reasoning models (o1, o3, GPT-5 reasoning variants, etc.) think before responding. Higher levels are slower but produce better answers on complex tasks. Leave on {0} for non-reasoning models or to let the provider pick.':
+    '推論モデル (o1、o3、GPT-5 の推論版など) は応答の前に考えます。高いレベルほど遅くなりますが、複雑なタスクでより良い答えを出します。推論しないモデルやプロバイダーに任せる場合は {0} のままにしてください。',
+  'Responses (GPT-5 series)': 'Responses (GPT-5 シリーズ)',
+
   // Copilot
   'Copilot settings': 'Copilot の設定',
   'Commit message generation': 'コミットメッセージの生成',
@@ -1613,6 +1725,341 @@ const patterns: ReadonlyArray<TranslationPattern> = [
     '$1 の変更をローカルの変更で上書きします$2',
   ],
   [/^Last fetched (.+)$/i, '最終フェッチ $1'],
+
+  // Updates, rules, branches, submodules and other dialogs
+  [
+    /^An optimized version of MS2026 Desktop is available for your (.+?) machine and will be installed at the next launch or \{0\} now\.$/i,
+    '$1 向けに最適化された MS2026 Desktop があり、次回の起動時にインストールされます。今すぐ{0}することもできます。',
+  ],
+  [
+    /^\{0\} Exciting new features have been added(.*?)\. See \{1\} or \{2\} ?\.$/i,
+    (t, version) =>
+      `{0} 新しい機能が追加されました${version
+        .replace(/^ in version /, ' (バージョン ')
+        .replace(/^( \(バージョン .+)$/, '$1)')}。{1}を確認する / {2}`,
+  ],
+  [
+    /^You have (.+) that haven't been pushed to the remote yet\.$/i,
+    (t, items) =>
+      `まだリモートにプッシュしていない${items.replace(
+        /(\d[\d,]*) local commits?/,
+        'ローカルコミットが $1 個'
+      )}あります。`,
+  ],
+  [
+    /^You can update your (local|global) git configuration (?:for your repository )?in your (.+)\.$/i,
+    (t, location, settings) =>
+      `${
+        location === 'local' ? 'このリポジトリの' : 'グローバルの'
+      } Git 設定は${t(settings)}で変更できます。`,
+  ],
+  [
+    /^You can( also)? choose an email local to this repository from the \{0\} ?\.$/i,
+    '{0}から、このリポジトリ専用のメールアドレスも選べます。',
+  ],
+  [
+    /^The email in your global Git config \(\{0\}\) doesn't match your GitHub(.*?) account(?: for (.+?))?\. \{1\}$/i,
+    (t, suffix, user) =>
+      `グローバルの Git 設定のメールアドレス ({0}) が${
+        user ? ` ${user} の` : ''
+      } GitHub${suffix} アカウントと一致しません。{1}`,
+  ],
+  [/^Committing with (.+)$/i, '$1 でコミット'],
+  [
+    /^The branch name \{0\} fails \{1\} that (?:would|will) prevent it from being published(, but you can bypass them\. Proceed with caution!|\. Want to \{2\} ?\?)$/i,
+    (t, end) =>
+      end.startsWith(',')
+        ? 'ブランチ名 {0} は{1}に違反しており、このままでは公開できません。回避もできますが、注意して進めてください。'
+        : 'ブランチ名 {0} は{1}に違反しており、公開できません。{2}しますか?',
+  ],
+  [
+    /^\{0\} apply to the branch \{1\} that require signed commits(, but you can bypass them\. Proceed with caution!|\.) \{2\}$/i,
+    (t, end) =>
+      end.startsWith(',')
+        ? 'ブランチ {1} には署名付きコミットを必要とする{0}があります。回避もできますが、注意して進めてください。{2}'
+        : 'ブランチ {1} には署名付きコミットを必要とする{0}があります。{2}',
+  ],
+  [
+    /^\{0\} apply to the branch \{1\} that (?:would|will) prevent pushing(, but you can bypass them\. Proceed with caution!|\. Want to \{2\} ?\?)$/i,
+    (t, end) =>
+      end.startsWith(',')
+        ? 'ブランチ {1} にはプッシュを妨げる{0}があります。回避もできますが、注意して進めてください。'
+        : 'ブランチ {1} にはプッシュを妨げる{0}があります。{2}しますか?',
+  ],
+  [/^one or more rules$/i, '1 つ以上のルール'],
+  [
+    /^(.+) fails (\d+) rules?(, but you can bypass (?:it|them)\. Proceed with caution!|\.) \{0\}$/i,
+    (t, leading, count, end) =>
+      `${t(leading)}は ${count} 個のルールに違反しています。${
+        end.startsWith(',') ? '回避もできますが、注意して進めてください。' : ''
+      }{0}`,
+  ],
+  [
+    /^Your new branch will be based on the commit '(.*)' \( ?(\w+) ?\) from your repository\.$/i,
+    "新しいブランチは、リポジトリのコミット '$1' ($2) をもとに作成されます。",
+  ],
+  [
+    /^You do not currently have any branch checked out \(your HEAD reference is detached\)\. As such your new branch will be based on your currently checked out commit \( ?(\w+) ?\)\.$/i,
+    '現在どのブランチもチェックアウトしていません (HEAD がデタッチされています)。新しいブランチは、現在チェックアウトしているコミット ($1) をもとに作成されます。',
+  ],
+  [
+    /^Your new branch will be based on your currently checked out branch \( ?\{0\} ?\)(\{1\})?\.(?: \{(\d)\} is the \{(\d)\} for your repository\.)?$/i,
+    (t, suffix, ref, link) =>
+      `新しいブランチは、現在チェックアウトしているブランチ ({0})${
+        suffix ?? ''
+      } をもとに作成されます。${
+        ref !== undefined ? `{${ref}} はリポジトリの{${link}}です。` : ''
+      }`,
+  ],
+  [
+    /^Your new branch will be based on \{0\} ?'s \{1\} \( ?\{2\} ?\) ?(\{3\})?\.$/i,
+    (t, suffix) =>
+      `新しいブランチは {0} の{1} ({2})${suffix ?? ''} をもとに作成されます。`,
+  ],
+  [
+    /^This file uses '(.+?)' line endings, but \{0\} to '(.+?)' the next time the file is checked out\.$/i,
+    "このファイルの改行コードは '$1' ですが、次にチェックアウトするときに '$2' に変換するよう{0}。",
+  ],
+  [
+    /^This submodule changed its commit from \{0\} to \{1\}\.( This change can be committed to the parent repository\.)?$/i,
+    (t, suffix) =>
+      `このサブモジュールのコミットが {0} から {1} に変わりました。${
+        suffix ? 'この変更は親リポジトリにコミットできます。' : ''
+      }`,
+  ],
+  [
+    /^This submodule (?:was|has been) added pointing at commit \{0\}\.( This change can be committed to the parent repository\.)?$/i,
+    (t, suffix) =>
+      `このサブモジュールはコミット {0} を指す状態で追加されました。${
+        suffix ? 'この変更は親リポジトリにコミットできます。' : ''
+      }`,
+  ],
+  [
+    /^This submodule (?:was|has been) removed while it was pointing at commit \{0\}\.( This change can be committed to the parent repository\.)?$/i,
+    (t, suffix) =>
+      `このサブモジュールはコミット {0} を指した状態で削除されました。${
+        suffix ? 'この変更は親リポジトリにコミットできます。' : ''
+      }`,
+  ],
+  [
+    /^This submodule has (modified and untracked|untracked|modified) changes\. Those changes must be committed inside of the submodule before they can be part of the parent repository\.$/i,
+    (t, kind) =>
+      `このサブモジュールには${
+        kind === 'modified'
+          ? '変更'
+          : kind === 'untracked'
+          ? '未追跡の変更'
+          : '変更と未追跡の変更'
+      }があります。親リポジトリに含めるには、先にサブモジュール内でコミットしてください。`,
+  ],
+  [
+    /^Changes can be restored by retrieving them from the (.+?) ?\.$/i,
+    (t, trash) => `変更は${t(trash)}から取り出して復元できます。`,
+  ],
+  [
+    /^Failed to discard changes to (.+)\.$/i,
+    (t, trash) => `変更を${t(trash)}に移せませんでした。`,
+  ],
+  [
+    /^The (.+) is configured to delete items immediately\.$/i,
+    (t, trash) => `${t(trash)}がすぐに削除する設定になっています。`,
+  ],
+  [
+    /^These changes will be unrecoverable from the (.+)\.$/i,
+    (t, trash) => `これらの変更は${t(trash)}から復元できなくなります。`,
+  ],
+  [
+    /^A new attempt of (\{0\}|these workflows) will be started, including all of (?:its|their) dependents:$/i,
+    (t, name) =>
+      `${
+        name === '{0}' ? '{0}' : 'これらのワークフロー'
+      }と、それに依存するすべてのチェックを再実行します:`,
+  ],
+  [/^([\d,]+) unreachable commits?$/i, '到達できない $1 個のコミット'],
+  [/^([\d,]+) changed files?$/i, '$1 個の変更されたファイル'],
+  [
+    /^You will (not )?see changes from the following commits? because (?:they're|it's) (not )?in the ancestry path of the most recent commit in your selection\. \{0\}$/i,
+    (t, not) =>
+      not
+        ? '次のコミットは、選択した最新のコミットの祖先にないため、変更は表示されません。{0}'
+        : '次のコミットは、選択した最新のコミットの祖先にあるため、変更が表示されます。{0}',
+  ],
+  [
+    /^The (\S+) hook failed\. What would you like to do\?$/i,
+    '$1 フックが失敗しました。どうしますか?',
+  ],
+  [
+    /^We were unable to locate Git on your system\. This means you won't be able to execute any Git commands in the (.+)\.$/i,
+    (t, where) =>
+      `Git が見つかりませんでした。${t(
+        where
+      )}で Git のコマンドを実行できません。`,
+  ],
+  [/^command prompt$/i, 'コマンドプロンプト'],
+  [
+    /^([\d,]+) repositories use \{0\}\. To contribute to them, Git LFS must first be initialized\. Would you like to do so now\?$/i,
+    '$1 個のリポジトリが {0} を使っています。貢献するには、先に Git LFS を初期化する必要があります。今すぐ初期化しますか?',
+  ],
+  [
+    /^(The repositories use|This repository uses) \{0\}\. To contribute to (?:them|it), Git LFS must first be initialized\. Would you like to do so now\?$/i,
+    (t, which) =>
+      `${
+        which.startsWith('The') ? 'これらのリポジトリ' : 'このリポジトリ'
+      }は {0} を使っています。貢献するには、先に Git LFS を初期化する必要があります。今すぐ初期化しますか?`,
+  ],
+  [
+    /^Will be (.+?) as \{0\}\. \{1\}$/i,
+    (t, verb) =>
+      `{0} として${
+        verb.trim() === 'created' ? '作成' : t(verb.trim())
+      }されます。{1}`,
+  ],
+  [
+    /^Unable to (.+?) when changes are present on your branch\.(.*)$/i,
+    (t, action, rest) =>
+      `ブランチに変更があるため、${t(action)}できません。${t(rest.trim())}`,
+  ],
+  [/^switch branches?$/i, 'ブランチの切り替え'],
+  [/^Can't find "(.+)"$/i, '「$1」が見つかりません'],
+  [
+    /^Cherry-pick ([\d,]+) commits? to a branch$/i,
+    '$1 個のコミットをブランチにチェリーピック',
+  ],
+  [
+    /^([\d,]+) conflicted files? (?:have|has) been resolved\.$/i,
+    '$1 個のコンフリクトのあるファイルが解決されました。',
+  ],
+  [
+    /^([\d,]+) checks? failed in your pull request$/i,
+    'プルリクエストのチェックが $1 個失敗しました',
+  ],
+  [
+    /^Do you want to switch to that Pull Request now and start fixing (?:them|it)\?$/i,
+    'このプルリクエストに切り替えて修正を始めますか?',
+  ],
+  [
+    /^\{0\} (.+?) your pull request \{1\}$/i,
+    (t, verb) =>
+      `{0} があなたのプルリクエストを${
+        /approved/i.test(verb)
+          ? '承認しました'
+          : /changes/i.test(verb)
+          ? 'レビューして変更を要求しました'
+          : /review/i.test(verb)
+          ? 'レビューしました'
+          : 'コメントしました'
+      } {1}`,
+  ],
+  [/^\{0\} at line (\d+)$/i, '{0} の $1 行目'],
+  [
+    /^The authenticity of host '(.+?) \((.+?)\)' can't be established\. (\S+) key fingerprint is (.+)\.$/i,
+    "ホスト '$1 ($2)' の真正性を確認できません。$3 鍵のフィンガープリントは $4 です。",
+  ],
+  [
+    /^Thanks so much for all your hard work on MS2026 Desktop(.*)\. We're so grateful for your willingness to contribute and make the app better for everyone!$/i,
+    'MS2026 Desktop$1 へのご尽力に心から感謝します。アプリをみんなのためにより良くしようとしてくれて、本当にありがとうございます!',
+  ],
+  [
+    /^([\d,]+) users weren't found and won't be added as co-authors of this commit\. Are you sure you want to commit\?$/i,
+    '$1 人のユーザーが見つからなかったため、このコミットの共同作成者に追加されません。コミットしてもよろしいですか?',
+  ],
+  [
+    /^MS2026 Desktop cannot verify the identity of (.+?)\. The certificate \((.+?)\) is invalid or untrusted\. \{0\}$/i,
+    'MS2026 Desktop は $1 の身元を確認できません。証明書 ($2) が無効か、信頼されていません。{0}',
+  ],
+  [
+    /^The "(.+)" organization has enabled or enforced SAML SSO\. To access this repository, you must sign in again and grant GitHub Desktop permission to access the organization's repositories\.$/i,
+    '組織「$1」で SAML SSO が有効になっています。このリポジトリにアクセスするには、もう一度サインインし、組織のリポジトリへのアクセスを許可してください。',
+  ],
+  [
+    /^Make sure notifications are (.+?) for MS2026 Desktop in the \{0\} ?\.$/i,
+    (t, verb) =>
+      `{0}で MS2026 Desktop の通知が${
+        /enabled/i.test(verb) ? '有効' : t(verb)
+      }になっていることを確認してください。`,
+  ],
+  [
+    /^Looks like there are no repositories for \{0\} on (.+?)\. \{1\} if you've created a repository recently\.$/i,
+    '$1 に {0} のリポジトリはないようです。最近リポジトリを作成した場合は{1}してください。',
+  ],
+  [
+    /^Merge (.+?) into \{0\} from \{1\}\.$/i,
+    (t, commits) =>
+      `${commits.replace(
+        /(\d[\d,]*) commits?/,
+        '$1 個のコミット'
+      )}を {0} にマージします (マージ元: {1})。`,
+  ],
+  [/^Cherry-picking from (.+)$/i, '$1 からチェリーピックしています'],
+
+  // Labels and tooltips built in code
+  [/^(\d+) suggestions?$/i, '候補 $1 件'],
+  [/^Added (\S+)$/i, '$1 を追加しました'],
+  [/^Removed (\S+)$/i, '$1 を削除しました'],
+  [
+    /^Copy the full (previous|new) SHA$/i,
+    (t, which) => `${which === 'new' ? '新しい' : '以前の'}完全な SHA をコピー`,
+  ],
+  [
+    /^(Create|Delete|Update) (\S+\.\S+)$/i,
+    (t, verb, file) =>
+      `${file} を${
+        verb === 'Create' ? '作成' : verb === 'Delete' ? '削除' : '更新'
+      }`,
+  ],
+  [
+    /^(Delete|Keep) file \((.+)\)$/i,
+    (t, verb, why) =>
+      `ファイルを${verb === 'Delete' ? '削除' : '残す'} (${why})`,
+  ],
+  [/^Email: (.+)$/i, 'メールアドレス: $1'],
+  [
+    /^Press Enter to insert the selected commits? (.+) or Escape to cancel\.$/i,
+    'Enter キーで選択したコミットを $1 に挿入、Escape キーでキャンセルします。',
+  ],
+  [
+    /^Use the Up and Down arrow keys to choose a new location for the selected commits?, then press Enter to confirm or Escape to cancel\.$/i,
+    '上下の矢印キーで選択したコミットの新しい位置を選び、Enter キーで確定、Escape キーでキャンセルします。',
+  ],
+  [/^Thank you (.+)!(.*)$/i, '$1 さん、ありがとうございます!$2'],
+  [
+    /^There (?:is|are) (\d+) (failed )?checks? that cannot be re-run$/i,
+    (t, n, failed) =>
+      `再実行できない${failed ? '失敗した' : ''}チェックが ${n} 個あります`,
+  ],
+  [
+    /^There are no (failed )?checks that can be re-run$/i,
+    (t, failed) =>
+      `再実行できる${failed ? '失敗した' : ''}チェックはありません`,
+  ],
+  [
+    /^This commit has (\d+) tags? to push$/i,
+    'このコミットにはプッシュするタグが $1 個あります',
+  ],
+  [/^View (.+) on GitHub$/i, '$1 を GitHub で表示'],
+  [
+    /^Will be created as (.+)\. Invalid characters have been replaced by hyphens\.$/i,
+    '$1 として作成されます。使用できない文字はハイフンに置き換えられました。',
+  ],
+  [/^Why are you bypassing this (.+)\?$/i, 'この$1を回避する理由は何ですか?'],
+  [/^(\d+) conflicts$/i, 'コンフリクト $1 件'],
+  [/^Choose a branch to merge into (.+)$/i, '$1 にマージするブランチを選択'],
+  [/^Committed Just now - (.+)$/i, 'たった今コミットしました - $1'],
+  [
+    /^Unable to add the Gitea account: (.*)$/i,
+    'Gitea アカウントを追加できませんでした: $1',
+  ],
+  [
+    /^(Change|Create) repository alias$/i,
+    (t, verb) =>
+      `リポジトリのエイリアスを${verb === 'Change' ? '変更' : '作成'}`,
+  ],
+  [
+    /^Discard (added|removed) lines?$/i,
+    (t, kind) => (kind === 'added' ? '追加した行を破棄' : '削除した行を破棄'),
+  ],
+  [/^Linked worktrees$/i, 'リンクされたワークツリー'],
+  [/^Main worktree$/i, 'メインのワークツリー'],
 
   // Home screen suggestions
   [

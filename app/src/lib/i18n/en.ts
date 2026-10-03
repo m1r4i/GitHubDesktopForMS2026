@@ -49,12 +49,45 @@ const phrases: Record<string, string> = {
   仕事: 'Work',
   ホーム: 'Home',
 
-  // Home
+  // Home greetings, see teamGreetings
   おはようございます: 'Good morning',
+  'おはようございます。今日も一日よろしくお願いします':
+    "Good morning. Let's have a good day",
+  まずはフェッチから始めましょう: "Let's start with a fetch",
+  コーヒーの準備はできましたか: 'Got your coffee ready?',
+  '新しい一日、新しいブランチ': 'A new day, a new branch',
+  朝の静かなうちに進めましょう: 'Get ahead while the morning is quiet',
   お昼の時間です: "It's lunchtime",
+  お昼ごはんはしっかりと: 'Have a proper lunch',
+  ひと休みしてから続きをどうぞ: 'Take a break, then carry on',
+  午前の作業はコミットしましたか: "Have you committed this morning's work?",
+  午後に向けてひと息つきましょう: 'Catch your breath before the afternoon',
   今日もいいコミットを: 'Make some good commits today',
+  小さなコミットを重ねていきましょう: 'Small commits add up',
+  プルリクエストのレビューもお忘れなく: "Don't forget to review pull requests",
+  ここからもうひと頑張り: 'One more push from here',
+  '集中できていますか。水分補給もどうぞ':
+    'Staying focused? Remember to drink some water',
+  コンフリクトは早めに解決しましょう: 'Resolve conflicts early',
   おつかれさまです: 'Nice work today',
+  今日の作業はプッシュしましたか: "Have you pushed today's work?",
+  今日もおつかれさまでした: 'Thanks for your work today',
+  帰る前にコミットを忘れずに: "Don't forget to commit before you leave",
+  いいところで区切りをつけましょう: 'Find a good place to stop',
   夜更かしはほどほどに: "Don't stay up too late",
+  遅くまでおつかれさまです: 'Thanks for working late',
+  続きは明日の自分に任せるのもありです:
+    "It's fine to leave the rest to tomorrow's you",
+  夜のコミットは見直してからプッシュを:
+    'Look over late night commits before pushing them',
+  そろそろ休みませんか: 'Time for a rest?',
+  あけましておめでとうございます: 'Happy New Year',
+  今年も一年おつかれさまでした: 'Thanks for all your work this year',
+  メリークリスマス: 'Merry Christmas',
+  休日の夜更かしはほどほどに: "Don't stay up too late on your day off",
+  休日もおつかれさまです: 'Thanks for working on your day off',
+  今週もよろしくお願いします: "Let's have a good week",
+  今週もおつかれさまでした: 'Thanks for your work this week',
   '未コミットの変更はありません。次にできることはこちらです。':
     "You have no uncommitted changes. Here's what you can do next.",
   'レビュー内容の確認、マージ、クローズをアプリ内で行えます。':
