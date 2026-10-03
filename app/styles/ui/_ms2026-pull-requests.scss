@@ -25,7 +25,12 @@ dialog.open-pull-request {
 }
 
 dialog#pull-request-details {
-  width: 560px;
+  width: 640px;
+
+  .dialog-content {
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+  }
 
   .pr-loading {
     color: var(--text-secondary-color);
@@ -508,5 +513,188 @@ dialog#pull-request-list {
     .octicon {
       margin-right: var(--spacing-half);
     }
+  }
+}
+
+// Sections of the pull request dialog: reviewers, assignees, labels and the
+// conversation
+dialog#pull-request-details {
+  .pr-section {
+    margin-top: var(--spacing-double);
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-half);
+      margin: 0 0 var(--spacing);
+      font-size: var(--font-size);
+    }
+  }
+
+  .pr-side-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-double);
+
+    .pr-section {
+      min-width: 0;
+    }
+  }
+}
+
+.tag-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-half);
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 2px 0 10px;
+    border-radius: 999px;
+    background: var(--box-alt-background-color);
+  }
+
+  .tag-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .tag-label {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .tag-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary-color);
+
+    &:not([aria-disabled='true']):hover {
+      background: var(--box-hover-background-color);
+    }
+  }
+
+  .tag-empty {
+    margin: 0;
+    color: var(--text-secondary-color);
+  }
+
+  .tag-add select {
+    max-width: 100%;
+  }
+}
+
+.pr-conversation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+
+  .conversation-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .conversation-item {
+    padding: var(--spacing);
+    border-radius: 10px;
+    background: var(--box-alt-background-color);
+
+    &.approved {
+      box-shadow: inset 3px 0 0 var(--color-new);
+    }
+
+    &.changes_requested {
+      box-shadow: inset 3px 0 0 var(--color-deleted);
+    }
+  }
+
+  .conversation-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-half);
+    color: var(--text-secondary-color);
+
+    .conversation-login {
+      color: var(--text-color);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .conversation-date {
+      margin-left: auto;
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  .approved .conversation-header .octicon {
+    color: var(--color-new);
+  }
+
+  .changes_requested .conversation-header .octicon {
+    color: var(--color-deleted);
+  }
+
+  .conversation-body {
+    margin-top: var(--spacing-half);
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: text;
+  }
+
+  .conversation-empty {
+    margin: 0;
+    color: var(--text-secondary-color);
+  }
+
+  textarea {
+    min-height: 54px;
+    resize: vertical;
+  }
+
+  .conversation-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-half);
+
+    .octicon {
+      margin-right: var(--spacing-half);
+    }
+  }
+}
+
+dialog#pull-request-list .pr-list-author {
+  flex: 0 0 auto;
+
+  // Visually hidden but still the accessible name of the select
+  label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }

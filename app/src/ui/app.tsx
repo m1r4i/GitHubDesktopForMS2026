@@ -2646,6 +2646,9 @@ export class App extends React.Component<IAppProps, IAppState> {
             )}
             owner={popup.owner}
             name={popup.name}
+            initialAuthorFilter={
+              popup.reviewRequestsOnly ? 'review-requested' : undefined
+            }
             onDismissed={onPopupDismissedFn}
           />
         )
@@ -3424,8 +3427,13 @@ export class App extends React.Component<IAppProps, IAppState> {
         terminalCwd={repository !== null ? repository.path : null}
         onOpenURL={this.onOpenTeamURL}
         accounts={this.state.accounts}
+        onShowReviewRequests={this.onShowReviewRequests}
       />
     )
+  }
+
+  private onShowReviewRequests = () => {
+    this.props.dispatcher.showReviewRequests()
   }
 
   private onOpenTeamURL = (url: string) => {

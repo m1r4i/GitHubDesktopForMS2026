@@ -156,6 +156,7 @@ import {
   isGiteaEndpoint,
 } from '../gitea'
 import { getLanguage, onLanguageChanged } from '../i18n/language'
+import { IReviewRequestSource, reviewRequests } from '../review-requests'
 import { shell } from '../app-shell'
 import {
   CompareAction,
@@ -8675,6 +8676,64 @@ export class AppStore extends TypedBaseStore<IAppState> {
       type: PopupType.PullRequestList,
       repository,
       ...target,
+    })
+  }
+
+  /**
+   * Start looking for pull requests waiting for the user's review in all
+   * their repositories, see lib/review-requests.
+   */
+  public _startWatchingReviewRequests() {
+    reviewRequests.start(
+      () => this.getReviewRequestSources(),
+      request =>
+        this._showPopup({
+          type: PopupType.PullRequestDetails,
+          repository: request.source.repository,
+          owner: request.source.owner,
+          name: request.source.name,
+          pullRequestNumber: request.number,
+        })
+    )
+  }
+
+  private getReviewRequestSources(): ReadonlyArray<IReviewRequestSource> {
+    const sources = new Array<IReviewRequestSource>()
+    for (const repository of this.repositories) {
+      if (!isRepositoryWithGitHubRepository(repository)) {
+        continue
+      }
+      const account = getAccountForRepository(this.accounts, repository)
+      const target = this.getPullRequestTarget(repository)
+      if (account !== null && target !== null) {
+        sources.push({ repository, account, ...target })
+      }
+    }
+    return sources
+  }
+
+  /**
+   * Show the pull requests waiting for the user's review, in the selected
+   * repository if it has any.
+   */
+  public async _showReviewRequests(): Promise<void> {
+    const { requests } = reviewRequests
+    const selected = this.selectedRepository
+    const request =
+      requests.find(r => r.source.repository.id === selected?.id) ??
+      requests.at(0)
+
+    if (request === undefined) {
+      return
+    }
+
+    const { repository, owner, name } = request.source
+    return this._showPopup({
+      type: PopupType.PullRequestList,
+      repository,
+      owner,
+      name,
+      reviewRequestsOnly: true,
     })
   }
 

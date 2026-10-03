@@ -19,6 +19,7 @@ import {
 import type { Dispatcher } from '../../../src/ui/dispatcher'
 import { PullRequestListDialog } from '../../../src/ui/pull-request-list/pull-request-list-dialog'
 import { ReviewerPicker } from '../../../src/ui/pull-request-details/reviewer-picker'
+import { PullRequestDetailsDialog } from '../../../src/ui/pull-request-details/pull-request-details-dialog'
 
 const user = (login: string) => ({
   id: 1,
@@ -174,7 +175,7 @@ describe('ReviewerPicker', () => {
       />
     )
 
-    assert.ok(screen.getByText('承認'))
+    assert.ok(screen.getByText('承認済み'))
     assert.ok(screen.getByText('レビュー待ち'))
 
     // Only people who aren't reviewers yet can be added
@@ -194,5 +195,133 @@ describe('ReviewerPicker', () => {
     assert.equal(removeButtons.length, 1)
     fireEvent.click(removeButtons[0])
     assert.deepEqual(removed, ['bob'])
+  })
+})
+
+/** Dialogs aren't accessible in jsdom, so buttons are found by their text */
+const button = (text: string) =>
+  screen
+    .getAllByText(text)
+    .map(e => e.closest('button'))
+    .find(b => b !== null)!
+
+describe('PullRequestDetailsDialog', () => {
+  const previousSend = ipcRenderer.send
+
+  beforeEach(() => {
+    ipcRenderer.send = () => {}
+  })
+
+  afterEach(() => {
+    ipcRenderer.send = previousSend
+    mock.restoreAll()
+  })
+
+  it('shows the conversation and lets a reviewer comment, approve and label', async () => {
+    // Bob reviews Alice's pull request
+    const bob = new Account(
+      'bob',
+      getDotComAPIEndpoint(),
+      'token',
+      [],
+      '',
+      2,
+      'Bob'
+    )
+    const bug = { id: 7, name: 'bug', color: 'd73a4a' }
+    let labels: ReadonlyArray<typeof bug> = []
+    const comments = [
+      {
+        id: 1,
+        body: 'Looks interesting',
+        html_url: '',
+        user: user('carol'),
+        created_at: '2026-10-01T00:00:00Z',
+      },
+    ]
+
+    mock.method(API.prototype, 'fetchPullRequestDetails', async () =>
+      pullRequest(5, 'Add the team bar', {
+        assignees: [user('alice')],
+        labels,
+      })
+    )
+    mock.method(API.prototype, 'fetchAllPullRequestReviews', async () => [])
+    mock.method(
+      API.prototype,
+      'fetchPullRequestConversation',
+      async () => comments
+    )
+    mock.method(API.prototype, 'fetchReviewerCandidates', async () => [
+      user('alice'),
+      user('bob'),
+    ])
+    mock.method(API.prototype, 'fetchLabels', async () => [bug])
+    const postComment = mock.method(
+      API.prototype,
+      'createPullRequestComment',
+      async () => {}
+    )
+    const submitReview = mock.method(
+      API.prototype,
+      'submitPullRequestReview',
+      async () => {}
+    )
+    const setLabels = mock.method(
+      API.prototype,
+      'setPullRequestLabels',
+      async (_o: string, _n: string, _p: number, next: typeof labels) => {
+        labels = next
+      }
+    )
+
+    render(
+      <PullRequestDetailsDialog
+        dispatcher={{} as unknown as Dispatcher}
+        repository={repository}
+        account={bob}
+        owner="team"
+        name="app"
+        pullRequestNumber={5}
+        onDismissed={() => {}}
+      />
+    )
+
+    await waitFor(() => assert.ok(screen.getByText('Looks interesting')))
+    assert.ok(screen.getByText('会話'))
+    assert.ok(screen.getByText('担当者'))
+
+    // Comment
+    fireEvent.change(screen.getByLabelText('コメント'), {
+      target: { value: 'Nice work' },
+    })
+    fireEvent.click(button('コメント'))
+    await waitFor(() => assert.equal(postComment.mock.callCount(), 1))
+    assert.deepEqual(postComment.mock.calls[0].arguments, [
+      'team',
+      'app',
+      5,
+      'Nice work',
+    ])
+
+    // Approve, which bob can do as it isn't his pull request
+    await waitFor(() => assert.ok(!button('承認').hasAttribute('disabled')))
+    fireEvent.click(button('承認'))
+    await waitFor(() => assert.equal(submitReview.mock.callCount(), 1))
+    assert.equal(submitReview.mock.calls[0].arguments[3], 'APPROVE')
+
+    // Label
+    await waitFor(() =>
+      assert.ok(
+        Array.from(
+          (screen.getByLabelText('ラベルを追加') as HTMLSelectElement).options
+        ).some(o => o.value === '7')
+      )
+    )
+    fireEvent.change(screen.getByLabelText('ラベルを追加'), {
+      target: { value: '7' },
+    })
+    await waitFor(() => assert.equal(setLabels.mock.callCount(), 1))
+    await waitFor(() => assert.ok(screen.getByText('bug')))
   })
 })

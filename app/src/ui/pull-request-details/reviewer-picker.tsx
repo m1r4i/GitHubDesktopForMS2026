@@ -22,9 +22,9 @@ const stateLabels: Record<ReviewerState, string> = {
   selected: '',
   requested: 'レビュー待ち',
   PENDING: 'レビュー中',
-  APPROVED: '承認',
-  CHANGES_REQUESTED: '変更を要求',
-  COMMENTED: 'コメント',
+  APPROVED: '承認済み',
+  CHANGES_REQUESTED: '変更要求あり',
+  COMMENTED: 'コメント済み',
   DISMISSED: '却下',
 }
 

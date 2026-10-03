@@ -426,6 +426,8 @@ export type PopupDetail =
       owner: string
       /** The name of the repository whose pull requests are shown */
       name: string
+      /** Show only the pull requests waiting for the user's review */
+      reviewRequestsOnly?: boolean
     }
   | {
       type: PopupType.CICheckRunRerun

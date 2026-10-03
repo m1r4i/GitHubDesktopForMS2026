@@ -2518,6 +2518,11 @@ export class Dispatcher {
     return this.appStore._showPullRequest(repository)
   }
 
+  /** Show the pull requests waiting for the user's review. */
+  public showReviewRequests(): Promise<void> {
+    return this.appStore._showReviewRequests()
+  }
+
   /** Show all the pull requests of the repository. */
   public showPullRequestList(repository: Repository): Promise<void> {
     return this.appStore._showPullRequestList(repository)

@@ -9,6 +9,7 @@ import {
 import { Disposable } from 'event-kit'
 import { Account } from '../../models/account'
 import { teamUpdater, TeamUpdateState } from '../../lib/team-updater'
+import { IReviewRequest, reviewRequests } from '../../lib/review-requests'
 import { teamLinkIcons } from './team-link-icons'
 import { IntegratedTerminal } from './integrated-terminal'
 import { Button } from '../lib/button'
@@ -27,6 +28,9 @@ interface ITeamBarProps {
 
   /** Used to check private repositories for updates */
   readonly accounts: ReadonlyArray<Account>
+
+  /** Show the pull requests waiting for the user's review */
+  readonly onShowReviewRequests: () => void
 }
 
 interface ITeamBarState {
@@ -51,6 +55,9 @@ interface ITeamBarState {
   readonly links: ReadonlyArray<ITeamLink>
 
   readonly update: TeamUpdateState
+
+  /** Pull requests waiting for the user's review */
+  readonly reviewRequests: ReadonlyArray<IReviewRequest>
 }
 
 const terminalHeightKey = 'team-bar-terminal-height'
@@ -108,6 +115,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
   private dragStart: { y: number; height: number } | null = null
   private linksSubscription: Disposable | null = null
   private updateSubscription: Disposable | null = null
+  private reviewRequestsSubscription: Disposable | null = null
 
   public constructor(props: ITeamBarProps) {
     super(props)
@@ -119,6 +127,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
       terminalHeight: loadTerminalHeight(),
       links: getTeamLinks(),
       update: teamUpdater.state,
+      reviewRequests: reviewRequests.requests,
     }
   }
 
@@ -132,6 +141,9 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
     )
     teamUpdater.setAccounts(this.props.accounts)
     teamUpdater.start()
+    this.reviewRequestsSubscription = reviewRequests.onChanged(requests =>
+      this.setState({ reviewRequests: requests })
+    )
   }
 
   public componentDidUpdate(prevProps: ITeamBarProps) {
@@ -143,6 +155,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
   public componentWillUnmount() {
     this.linksSubscription?.dispose()
     this.updateSubscription?.dispose()
+    this.reviewRequestsSubscription?.dispose()
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('mousemove', this.onDragMove)
     window.removeEventListener('mouseup', this.onDragEnd)
@@ -277,6 +290,25 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
     />
   )
 
+  private renderReviewRequests() {
+    const count = this.state.reviewRequests.length
+    if (count === 0) {
+      return null
+    }
+
+    return (
+      <Button
+        className="team-bar-button team-review-requests"
+        onClick={this.props.onShowReviewRequests}
+        tooltip="あなたのレビューを待っているプルリクエスト"
+      >
+        <Octicon symbol={octicons.eye} />
+        レビュー依頼
+        <span className="team-review-count">{count}</span>
+      </Button>
+    )
+  }
+
   private onInstallUpdate = () => {
     teamUpdater.install()
   }
@@ -332,6 +364,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
             {this.state.links.map(this.renderLink)}
           </nav>
           <span className="team-bar-spacer" />
+          {this.renderReviewRequests()}
           {this.renderUpdate()}
           <Button
             className={classNames('team-bar-button', 'team-terminal-toggle', {

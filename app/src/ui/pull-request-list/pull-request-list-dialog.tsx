@@ -17,6 +17,7 @@ import {
 import { Dispatcher } from '../dispatcher'
 import { Button } from '../lib/button'
 import { TextBox } from '../lib/text-box'
+import { Select } from '../lib/select'
 import { Octicon } from '../octicons'
 import * as octicons from '../octicons/octicons.generated'
 import { RelativeTime } from '../relative-time'
@@ -36,11 +37,45 @@ interface IPullRequestListDialogProps {
   /** The name of the repository whose pull requests are shown */
   readonly name: string
 
+  /** Which pull requests to show first, e.g. those waiting for your review */
+  readonly initialAuthorFilter?: PullRequestAuthorFilter
+
   readonly onDismissed: () => void
 }
 
+/** Whose pull requests to show */
+export type PullRequestAuthorFilter = 'everyone' | 'mine' | 'review-requested'
+
+/** Keep the pull requests created by or waiting for a review from `me` */
+export function filterByAuthor(
+  pullRequests: ReadonlyArray<IAPIPullRequestDetails>,
+  filter: PullRequestAuthorFilter,
+  me: string
+): ReadonlyArray<IAPIPullRequestDetails> {
+  switch (filter) {
+    case 'mine':
+      return pullRequests.filter(pr => pr.user.login === me)
+    case 'review-requested':
+      return pullRequests.filter(pr =>
+        (pr.requested_reviewers ?? []).some(r => r.login === me)
+      )
+    default:
+      return pullRequests
+  }
+}
+
+const authorFilters: ReadonlyArray<{
+  readonly filter: PullRequestAuthorFilter
+  readonly label: string
+}> = [
+  { filter: 'everyone', label: 'すべての人' },
+  { filter: 'mine', label: '自分が作成' },
+  { filter: 'review-requested', label: '自分へのレビュー依頼' },
+]
+
 interface IPullRequestListDialogState {
   readonly filter: PullRequestListState
+  readonly authorFilter: PullRequestAuthorFilter
   readonly query: string
   readonly pullRequests: ReadonlyArray<IAPIPullRequestDetails>
   /** The last page which was loaded */
@@ -166,8 +201,11 @@ export class PullRequestListDialog extends React.Component<
 
   public constructor(props: IPullRequestListDialogProps) {
     super(props)
+    const authorFilter = props.initialAuthorFilter ?? 'everyone'
     this.state = {
-      filter: lastFilter,
+      // Review requests are only made on open pull requests
+      filter: authorFilter === 'review-requested' ? 'open' : lastFilter,
+      authorFilter,
       query: '',
       pullRequests: [],
       page: 0,
@@ -179,14 +217,18 @@ export class PullRequestListDialog extends React.Component<
 
   public componentDidMount() {
     this.mounted = true
-    this.load(this.state.filter, 1)
+    this.load(this.state.filter, this.state.authorFilter, 1)
   }
 
   public componentWillUnmount() {
     this.mounted = false
   }
 
-  private async load(filter: PullRequestListState, page: number) {
+  private async load(
+    filter: PullRequestListState,
+    authorFilter: PullRequestAuthorFilter,
+    page: number
+  ) {
     const { account, owner, name } = this.props
     if (account === null) {
       this.setState({
@@ -200,7 +242,23 @@ export class PullRequestListDialog extends React.Component<
     this.setState({ loading: true, error: null })
 
     try {
-      const prs = await API.fromAccount(account).fetchPullRequestsPage(
+      const api = API.fromAccount(account)
+
+      if (authorFilter !== 'everyone') {
+        // Filtering by person needs all of them as the API can't do it
+        const all = await api.fetchAllPullRequests(owner, name, filter)
+        if (this.mounted && id === this.requestId) {
+          this.setState({
+            pullRequests: filterByAuthor(all, authorFilter, account.login),
+            page: 1,
+            hasMore: false,
+            loading: false,
+          })
+        }
+        return
+      }
+
+      const prs = await api.fetchPullRequestsPage(
         owner,
         name,
         filter,
@@ -229,7 +287,21 @@ export class PullRequestListDialog extends React.Component<
     }
     lastFilter = filter
     this.setState({ filter, pullRequests: [], hasMore: false })
-    this.load(filter, 1)
+    this.load(filter, this.state.authorFilter, 1)
+  }
+
+  private onAuthorFilterChanged = (e: React.FormEvent<HTMLSelectElement>) => {
+    const { value } = e.currentTarget
+    const option = authorFilters.find(f => f.filter === value)
+    if (option === undefined || option.filter === this.state.authorFilter) {
+      return
+    }
+    this.setState({
+      authorFilter: option.filter,
+      pullRequests: [],
+      hasMore: false,
+    })
+    this.load(this.state.filter, option.filter, 1)
   }
 
   private onQueryChanged = (query: string) => {
@@ -237,11 +309,12 @@ export class PullRequestListDialog extends React.Component<
   }
 
   private onRefresh = () => {
-    this.load(this.state.filter, 1)
+    this.load(this.state.filter, this.state.authorFilter, 1)
   }
 
   private onLoadMore = () => {
-    this.load(this.state.filter, this.state.page + 1)
+    const { filter, authorFilter, page } = this.state
+    this.load(filter, authorFilter, page + 1)
   }
 
   private onOpenInBrowser = () => {
@@ -263,7 +336,7 @@ export class PullRequestListDialog extends React.Component<
   }
 
   private renderFilters() {
-    const { filter, query, loading } = this.state
+    const { filter, authorFilter, query, loading } = this.state
 
     return (
       <div className="pr-list-toolbar">
@@ -278,6 +351,18 @@ export class PullRequestListDialog extends React.Component<
             />
           ))}
         </div>
+        <Select
+          className="pr-list-author"
+          label="対象"
+          value={authorFilter}
+          onChange={this.onAuthorFilterChanged}
+        >
+          {authorFilters.map(f => (
+            <option key={f.filter} value={f.filter}>
+              {f.label}
+            </option>
+          ))}
+        </Select>
         <TextBox
           className="pr-list-search"
           type="search"
@@ -308,7 +393,8 @@ export class PullRequestListDialog extends React.Component<
   )
 
   private renderList() {
-    const { pullRequests, query, loading, hasMore, filter } = this.state
+    const { pullRequests, query, loading, hasMore, filter, authorFilter } =
+      this.state
     const visible = pullRequests.filter(pr => matches(pr, query))
 
     if (visible.length === 0) {
@@ -320,6 +406,10 @@ export class PullRequestListDialog extends React.Component<
         <p className="pr-list-empty">
           {query.trim().length > 0
             ? '一致するプルリクエストはありません。'
+            : authorFilter === 'review-requested'
+            ? 'あなたへのレビュー依頼はありません。'
+            : authorFilter === 'mine'
+            ? '自分が作成したプルリクエストはありません。'
             : filter === 'all'
             ? 'プルリクエストはありません。'
             : `${label}のプルリクエストはありません。`}

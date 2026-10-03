@@ -55,6 +55,25 @@
     }
   }
 
+  .team-review-requests {
+    flex: 0 0 auto;
+    color: var(--ms-accent);
+
+    .team-review-count {
+      min-width: 16px;
+      height: 16px;
+      padding: 0 5px;
+      border-radius: 8px;
+      background: var(--ms-accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: var(--font-weight-semibold);
+      line-height: 16px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
   .team-terminal-toggle.active {
     color: var(--ms-accent);
     background: var(--ms-accent-subtle);

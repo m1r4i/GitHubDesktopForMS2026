@@ -358,6 +358,7 @@ document.body.classList.add(`platform-${process.platform}`)
 dispatcher.initializeAppFocusState()
 
 initializeRendererNotificationHandler(notificationsStore)
+appStore._startWatchingReviewRequests()
 
 // The trampoline UI helper needs a reference to the dispatcher before it's used
 trampolineUIHelper.setDispatcher(dispatcher)

@@ -1320,6 +1320,122 @@ const phrases: Record<string, string> = {
   'Open in GitHub &Copilot': 'GitHub Copilot で開く',
   'Report issue…': '問題を報告…',
 
+  // More dialogs and settings
+  'Additional services': 'その他のサービス',
+  'App location': 'アプリの場所',
+  Applications: 'アプリケーション',
+  Author: '作成者',
+  'Beta channel': 'ベータチャンネル',
+  'Branch filter': 'ブランチのフィルター',
+  Bypass: '回避',
+  'Bypass push detection': 'プッシュ時の検出を回避',
+  Bypassed: '回避済み',
+  "Can't check for updates on Windows 8.1 or older. Next available update only supports Windows 10 and later":
+    'Windows 8.1 以前ではアップデートを確認できません。次のアップデートは Windows 10 以降のみに対応しています',
+  "Can't check for updates on macOS 12 or older. Next available update only supports macOS 13 and later":
+    'macOS 12 以前ではアップデートを確認できません。次のアップデートは macOS 13 以降のみに対応しています',
+  'Commit message rule failures': 'コミットメッセージのルール違反',
+  Committed: 'コミット済み',
+  'Confirm this address appears in your browser. Otherwise, cancel and contact your repository administrator.':
+    'このアドレスがブラウザに表示されていることを確認してください。表示されていない場合は、キャンセルしてリポジトリの管理者に連絡してください。',
+  Decrease: '減らす',
+  Increase: '増やす',
+  Default: '既定',
+  'Dismiss this message': 'このメッセージを閉じる',
+  Editing: '編集中',
+  Executables: '実行ファイル',
+  'File does not exist on disk': 'ファイルがディスク上に存在しません',
+  'File options': 'ファイルのオプション',
+  'File resolution options': 'ファイルの解決方法',
+  'File size limit exceeded': 'ファイルサイズの上限を超えています',
+  'Files that exceed the limit': '上限を超えるファイル',
+  'Git is requesting permission to sign in to this server:':
+    'Git がこのサーバーへのサインインの許可を求めています:',
+  'If this is a GitHub Enterprise trial.': 'GitHub Enterprise の試用版の場合。',
+  'If you are unsure of what to do, cancel and contact your system administrator.':
+    'どうすればよいかわからない場合は、キャンセルしてシステム管理者に連絡してください。',
+  'If your GitHub Enterprise instance is run on an unusual top-level domain.':
+    'GitHub Enterprise が一般的でないトップレベルドメインで運用されている場合。',
+  'In some cases, this may be expected. For example:':
+    '次のような場合は、想定どおりのこともあります:',
+  Incoming: '取り込む側',
+  Line: '行',
+  Lines: '行',
+  Hunk: 'ハンク',
+  'Looking for the latest features?': '最新の機能をお探しですか?',
+  'MS2026 Desktop also distributes these libraries:':
+    'MS2026 Desktop は次のライブラリも同梱しています:',
+  'No conflicts remaining': '残りのコンフリクトはありません',
+  'No files in commit': 'コミットにファイルがありません',
+  Override: '上書き',
+  Privacy: 'プライバシー',
+  Rules: 'ルール',
+  'Learn more about commit signing.': 'コミットの署名についての詳細',
+  'View all rulesets for this branch.':
+    'このブランチのすべてのルールセットを表示',
+  'Sign in to your GitHub Enterprise': 'GitHub Enterprise にサインイン',
+  Single: '単一',
+  Terminal: 'ターミナル',
+  'Terminal window': 'ターミナルウインドウ',
+  Type: '種類',
+  Unavailable: '利用不可',
+  'Unsupported format': '対応していない形式',
+  Whitespace: '空白',
+  "We couldn't find that repository. Check that you are logged in, the network is accessible, and the URL or repository alias are spelled correctly.":
+    'リポジトリが見つかりませんでした。サインインしていること、ネットワークにつながること、URL またはリポジトリのエイリアスが正しいことを確認してください。',
+  'When a stash exists, access it at the bottom of the Changes tab to the left.':
+    'スタッシュがある場合は、左の「変更」タブの下部から開けます。',
+  'Would you like to open a browser to grant GitHub Desktop permission to access the repository?':
+    'ブラウザを開いて、MS2026 Desktop にリポジトリへのアクセスを許可しますか?',
+  'Would you like to open a browser to grant GitHub Desktop permission to update workflow files?':
+    'ブラウザを開いて、MS2026 Desktop にワークフローファイルの更新を許可しますか?',
+  'Partially checked check list': '一部チェック済みのリスト',
+  'Restricted access to move the file(s).':
+    'ファイルを移動する権限がありません。',
+
+  // Secret scanning
+  'Secret scanning': 'シークレットスキャン',
+  Secrets: 'シークレット',
+  'Exposing this secret can allow someone to:':
+    'このシークレットが漏れると、次のことができてしまいます:',
+  "Act on behalf of the secret's owner": 'シークレットの所有者になりすます',
+  'Know which resources the secret(s) can access':
+    'シークレットでアクセスできるリソースを知る',
+  'Verify the identity of the secret(s)': 'シークレットの持ち主を確認する',
+  'Push the secret(s) to this repository without being blocked':
+    'ブロックされずにシークレットをこのリポジトリにプッシュする',
+  'Allow me to expose this secret': 'このシークレットの公開を許可する',
+  "It's a false positive": '誤検出です',
+  "It's used in tests": 'テストで使っています',
+  'The detected string is not a secret':
+    '検出された文字列はシークレットではありません',
+  'The secret poses no risk. If anyone finds it, they cannot do any damage or gain access to sensitive information.':
+    'このシークレットにリスクはありません。誰かに見つかっても、被害や機密情報へのアクセスにはつながりません。',
+  'The secret is real, I understand the risk, and I will need to revoke it. This will open a security alert and notify admins of this repository.':
+    'このシークレットは本物で、リスクを理解しており、後で無効化します。セキュリティアラートが作成され、このリポジトリの管理者に通知されます。',
+  'Show less locations': '場所を少なく表示',
+  'Show more locations': '場所をもっと表示',
+
+  // Copilot (more)
+  'A Copilot license is available for your account, but "Copilot in GitHub Desktop" is disabled in your Copilot feature settings.':
+    'アカウントに Copilot のライセンスはありますが、Copilot の機能設定で「Copilot in GitHub Desktop」が無効になっています。',
+  'Open Copilot feature settings': 'Copilot の機能設定を開く',
+  'Experience agent-driven development built natively on GitHub.':
+    'GitHub 上に構築されたエージェント駆動の開発を体験しましょう。',
+  'Responsible use of Copilot in GitHub Desktop':
+    'GitHub Desktop での Copilot の責任ある利用',
+  'Add a custom provider to use your own API keys with OpenAI-compatible endpoints, Azure, Anthropic, or local providers like Ollama.':
+    'カスタムプロバイダーを追加すると、OpenAI 互換のエンドポイント、Azure、Anthropic、Ollama などのローカルプロバイダーで自分の API キーを使えます。',
+  'Tell Desktop which models this provider offers. Each one will appear in the model picker for Copilot features.':
+    'このプロバイダーが提供するモデルを指定してください。それぞれ Copilot 機能のモデル選択に表示されます。',
+  'Base URL must be an https URL, or an http URL pointing at the local machine.':
+    'ベース URL は https の URL か、このマシンを指す http の URL にしてください。',
+  'Choose the GitHub Copilot application (.app).':
+    'GitHub Copilot アプリ (.app) を選択してください。',
+  'Choose the GitHub Copilot executable (github.exe).':
+    'GitHub Copilot の実行ファイル (github.exe) を選択してください。',
+  'Switch to manual': '手動に切り替え',
+
   // Copilot
   'Copilot settings': 'Copilot の設定',
   'Commit message generation': 'コミットメッセージの生成',
@@ -1488,15 +1604,46 @@ const patterns: ReadonlyArray<TranslationPattern> = [
     /^Push (.+) to the (\S+) remote$/i,
     (t, items, remote) =>
       `${items
-        .replace(/(\d[\d,]*) local commits?/, '$1 個のローカルコミット')
-        .replace(/(\d[\d,]*) tags?/, '$1 個のタグ')
-        .replace(' and ', ' と ')} を ${remote} リモートにプッシュ`,
+        .replace('commits', 'コミット')
+        .replace('tags', 'タグ')
+        .replace(' and ', 'と')}を ${remote} リモートにプッシュ`,
   ],
   [
     /^Overwrite any changes on (\S+) with your local changes(.*)$/i,
     '$1 の変更をローカルの変更で上書きします$2',
   ],
   [/^Last fetched (.+)$/i, '最終フェッチ $1'],
+
+  // Home screen suggestions
+  [
+    /^The current branch \(\{0\}\) hasn't been published to the remote yet\. By publishing it (?:to (.+?) )?you can share it, (open a pull request, )?and collaborate with others\.$/i,
+    (t, host, pr) =>
+      `現在のブランチ ({0}) はまだリモートに公開されていません。${
+        host ? `${host} に` : ''
+      }公開すると、共有${
+        pr ? '、プルリクエストの作成' : ''
+      }や共同作業ができます。`,
+  ],
+  [
+    /^The current branch \(\{0\}\) has (?:a commit|commits) on (.+?) that (?:does|do) not exist on your machine\.$/i,
+    '現在のブランチ ({0}) には、$1 にあってこのマシンにないコミットがあります。',
+  ],
+  [
+    /^The current branch \(\{0\}\) is already published to (.+?)\. Create a pull request to propose and collaborate on your changes\.$/i,
+    '現在のブランチ ({0}) は $1 に公開済みです。プルリクエストを作成して、変更を提案し共同作業しましょう。',
+  ],
+  [
+    /^The current branch \(\{0\}\) is already published to (.+?)\. Preview the changes this pull request will have before proposing your changes\.$/i,
+    '現在のブランチ ({0}) は $1 に公開済みです。提案する前に、プルリクエストに含まれる変更をプレビューできます。',
+  ],
+  [
+    /^You have (.+) waiting to be pushed to (.+)\.$/i,
+    (t, items, remote) =>
+      `${remote} にプッシュしていない${items
+        .replace(/(\d[\d,]*) local commits?/, 'ローカルコミット $1 個')
+        .replace(/(\d[\d,]*) tags?/, 'タグ $1 個')
+        .replace(' and ', 'と')}があります。`,
+  ],
 
   // Changes
   [/^Commit to (.+)$/i, '$1 にコミット'],
