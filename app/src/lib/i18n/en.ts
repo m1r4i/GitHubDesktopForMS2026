@@ -206,6 +206,10 @@ const patterns: ReadonlyArray<TranslationPattern> = [
     "Couldn't change the reviewers: $1",
   ],
   [/^マージできませんでした: (.*)$/, "Couldn't merge: $1"],
+  [
+    /^インストーラを起動できませんでした: (.*)$/,
+    "Couldn't start the installer: $1",
+  ],
   [/^担当者を変更できませんでした: (.*)$/, "Couldn't change the assignees: $1"],
   [/^ラベルを変更できませんでした: (.*)$/, "Couldn't change the labels: $1"],
   [/^コメントできませんでした: (.*)$/, "Couldn't post the comment: $1"],
