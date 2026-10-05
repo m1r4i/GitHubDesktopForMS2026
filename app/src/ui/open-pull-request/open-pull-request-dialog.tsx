@@ -240,28 +240,33 @@ export class OpenPullRequestDialog extends React.Component<
 
     return (
       <div className="open-pull-request-form">
-        <TextBox
-          label="タイトル"
-          value={title}
-          onValueChanged={this.onTitleChanged}
-          disabled={creating}
-          autoFocus={true}
-        />
-        <TextArea
-          label="説明"
-          value={body}
-          onValueChanged={this.onBodyChanged}
-          disabled={creating}
-          rows={3}
-          placeholder="変更内容やレビューしてほしい点など"
-        />
-        <ReviewerPicker
-          reviewers={reviewers.map(login => ({ login, state: 'selected' }))}
-          candidates={reviewerCandidates}
-          onAdd={this.onAddReviewer}
-          onRemove={this.onRemoveReviewer}
-          disabled={creating}
-        />
+        <div className="open-pull-request-text">
+          <TextBox
+            label="タイトル"
+            value={title}
+            onValueChanged={this.onTitleChanged}
+            disabled={creating}
+            autoFocus={true}
+          />
+          <TextArea
+            label="説明"
+            value={body}
+            onValueChanged={this.onBodyChanged}
+            disabled={creating}
+            rows={2}
+            placeholder="変更内容やレビューしてほしい点など"
+          />
+        </div>
+        <div className="open-pull-request-reviewers">
+          <span className="open-pull-request-label">レビュワー</span>
+          <ReviewerPicker
+            reviewers={reviewers.map(login => ({ login, state: 'selected' }))}
+            candidates={reviewerCandidates}
+            onAdd={this.onAddReviewer}
+            onRemove={this.onRemoveReviewer}
+            disabled={creating}
+          />
+        </div>
       </div>
     )
   }

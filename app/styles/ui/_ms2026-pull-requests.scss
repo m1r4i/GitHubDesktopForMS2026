@@ -2,21 +2,68 @@
 // team links editor of the MS2026 build.
 
 dialog.open-pull-request {
+  // The dialog doesn't clip its contents, so everything between the header
+  // and the footer has to shrink to keep the footer inside the window
   .open-pull-request-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing);
+    display: grid;
+    flex: 0 1 auto;
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 260px);
+    gap: var(--spacing) var(--spacing-double);
+    min-height: 0;
+    max-height: 40%;
+    overflow-y: auto;
     padding: var(--spacing) var(--spacing-double);
     border-bottom: var(--base-border);
 
     textarea {
-      min-height: 54px;
+      min-height: 40px;
       resize: vertical;
     }
   }
 
-  .open-pull-request-form + .open-pull-request-content {
-    min-height: calc(100vh - 400px);
+  .open-pull-request-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-half);
+    min-width: 0;
+  }
+
+  .open-pull-request-reviewers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-half);
+    min-width: 0;
+
+    .open-pull-request-label {
+      font-weight: var(--font-weight-semibold);
+    }
+
+    // The label of the picker's select repeats the heading above
+    .reviewer-add label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  }
+
+  .open-pull-request-content {
+    flex: 1 1 0;
+    min-height: 120px;
+    overflow: hidden;
+  }
+
+  .dialog-footer {
+    flex: 0 0 auto;
+  }
+
+  // Too narrow for two columns
+  @media (max-width: 700px) {
+    .open-pull-request-form {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .dialog-footer .button-component .octicon {
