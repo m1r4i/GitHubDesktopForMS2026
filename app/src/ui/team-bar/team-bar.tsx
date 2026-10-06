@@ -10,6 +10,9 @@ import { Disposable } from 'event-kit'
 import { Account } from '../../models/account'
 import { teamUpdater, TeamUpdateState } from '../../lib/team-updater'
 import { IReviewRequest, reviewRequests } from '../../lib/review-requests'
+import { IWeatherState, weatherStore } from '../../lib/weather-store'
+import { isSameLocation } from '../../lib/weather'
+import { WeatherIcon } from '../weather/weather-icon'
 import { teamLinkIcons } from './team-link-icons'
 import { IntegratedTerminal } from './integrated-terminal'
 import { Button } from '../lib/button'
@@ -58,6 +61,8 @@ interface ITeamBarState {
 
   /** Pull requests waiting for the user's review */
   readonly reviewRequests: ReadonlyArray<IReviewRequest>
+
+  readonly weather: IWeatherState
 }
 
 const terminalHeightKey = 'team-bar-terminal-height'
@@ -116,6 +121,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
   private linksSubscription: Disposable | null = null
   private updateSubscription: Disposable | null = null
   private reviewRequestsSubscription: Disposable | null = null
+  private weatherSubscription: Disposable | null = null
 
   public constructor(props: ITeamBarProps) {
     super(props)
@@ -128,6 +134,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
       links: getTeamLinks(),
       update: teamUpdater.state,
       reviewRequests: reviewRequests.requests,
+      weather: weatherStore.state,
     }
   }
 
@@ -144,6 +151,10 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
     this.reviewRequestsSubscription = reviewRequests.onChanged(requests =>
       this.setState({ reviewRequests: requests })
     )
+    this.weatherSubscription = weatherStore.onChanged(weather =>
+      this.setState({ weather })
+    )
+    weatherStore.start()
   }
 
   public componentDidUpdate(prevProps: ITeamBarProps) {
@@ -156,6 +167,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
     this.linksSubscription?.dispose()
     this.updateSubscription?.dispose()
     this.reviewRequestsSubscription?.dispose()
+    this.weatherSubscription?.dispose()
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('mousemove', this.onDragMove)
     window.removeEventListener('mouseup', this.onDragEnd)
@@ -309,6 +321,44 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
     )
   }
 
+  private onRefreshWeather = () => {
+    weatherStore.refresh()
+  }
+
+  private renderWeather() {
+    const { forecast, locations } = this.state.weather
+    const location = locations[0]
+    if (forecast === null || !isSameLocation(forecast.location, location)) {
+      return null
+    }
+
+    const { current } = forecast
+    const temperature = `${Math.round(current.temperature)}°`
+    const rain =
+      current.precipitationProbability === null
+        ? ''
+        : ` · 降水確率 ${current.precipitationProbability}%`
+
+    return (
+      <Button
+        className="team-bar-button team-weather"
+        onClick={this.onRefreshWeather}
+        tooltip={`${location.name}: ${current.condition.label} ${temperature} · 湿度 ${current.humidity}%${rain}`}
+      >
+        <WeatherIcon
+          kind={current.condition.kind}
+          isDay={current.isDay}
+          size={16}
+          animated={false}
+        />
+        <span className="team-weather-temp">{temperature}</span>
+        <span className="team-weather-place" translate="no">
+          {location.name}
+        </span>
+      </Button>
+    )
+  }
+
   private onInstallUpdate = () => {
     teamUpdater.install()
   }
@@ -364,6 +414,7 @@ export class TeamBar extends React.Component<ITeamBarProps, ITeamBarState> {
             {this.state.links.map(this.renderLink)}
           </nav>
           <span className="team-bar-spacer" />
+          {this.renderWeather()}
           {this.renderReviewRequests()}
           {this.renderUpdate()}
           <Button

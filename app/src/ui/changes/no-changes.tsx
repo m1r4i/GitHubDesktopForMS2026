@@ -2,6 +2,7 @@ import * as React from 'react'
 
 import { getHostingServiceName } from '../../lib/gitea'
 import { HomeHeader } from './home-header'
+import { WeatherCard } from '../weather/weather-card'
 import { Repository } from '../../models/repository'
 import { LinkButton } from '../lib/link-button'
 import { MenuIDs } from '../../models/menu-ids'
@@ -800,6 +801,7 @@ export class NoChanges extends React.Component<
       <div className="changes-interstitial">
         <div className="content">
           <HomeHeader />
+          <WeatherCard />
           {this.renderActions()}
         </div>
       </div>

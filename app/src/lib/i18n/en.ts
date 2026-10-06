@@ -224,6 +224,54 @@ const phrases: Record<string, string> = {
   リンクを追加: 'Add link',
   チームの既定に戻す: "Restore the team's defaults",
 
+  // Weather, see lib/weather
+  快晴: 'Clear',
+  晴れ: 'Mostly clear',
+  晴れ時々曇り: 'Partly cloudy',
+  曇り: 'Cloudy',
+  霧: 'Fog',
+  着氷性の霧: 'Freezing fog',
+  弱い霧雨: 'Light drizzle',
+  霧雨: 'Drizzle',
+  強い霧雨: 'Heavy drizzle',
+  着氷性の霧雨: 'Freezing drizzle',
+  強い着氷性の霧雨: 'Heavy freezing drizzle',
+  小雨: 'Light rain',
+  雨: 'Rain',
+  大雨: 'Heavy rain',
+  着氷性の雨: 'Freezing rain',
+  強い着氷性の雨: 'Heavy freezing rain',
+  小雪: 'Light snow',
+  雪: 'Snow',
+  大雪: 'Heavy snow',
+  霧雪: 'Snow grains',
+  にわか雨: 'Showers',
+  激しいにわか雨: 'Heavy showers',
+  にわか雪: 'Snow showers',
+  激しいにわか雪: 'Heavy snow showers',
+  雷雨: 'Thunderstorm',
+  ひょうを伴う雷雨: 'Thunderstorm with hail',
+  激しいひょうを伴う雷雨: 'Thunderstorm with heavy hail',
+  不明: 'Unknown',
+  天気: 'Weather',
+  湿度: 'Humidity',
+  降水確率: 'Chance of rain',
+  '最高 / 最低': 'High / Low',
+  今: 'Now',
+  今日: 'Today',
+  地点を選ぶ: 'Choose a place',
+  '地名で検索 (例: 大阪、札幌、New York)':
+    'Search for a place (e.g. Osaka, Sapporo, New York)',
+  地名で検索: 'Search for a place',
+  '検索しています…': 'Searching…',
+  '見つかりませんでした。': 'Nothing found.',
+  保存した地点: 'Saved places',
+  '天気を取得できませんでした。': "Couldn't get the weather.",
+  再試行: 'Try again',
+  天気を更新: 'Refresh the weather',
+  '1時間ごとの予報': 'Hourly forecast',
+  週間予報: '7-day forecast',
+
   // Settings: language
   言語: 'Language',
   表示言語: 'Display language',
@@ -232,6 +280,25 @@ const phrases: Record<string, string> = {
 const patterns: ReadonlyArray<TranslationPattern> = [
   [/^プルリクエスト #(\d+) を確認する$/, 'Review pull request #$1'],
   [/^プルリクエスト #(\d+)$/, 'Pull request #$1'],
+  [/^更新 (\d.*)$/, 'Updated $1'],
+  [/^(\d[\d:]*(?: ?[AP]M)?) 更新$/, 'Updated $1'],
+  [/^(.+) を削除$/, 'Remove $1'],
+  [
+    /^天気を取得できませんでした \(HTTP (\d+)\)$/,
+    "Couldn't get the weather (HTTP $1)",
+  ],
+  [
+    /^地点を検索できませんでした \(HTTP (\d+)\)$/,
+    "Couldn't search for places (HTTP $1)",
+  ],
+  [
+    /^(.+): (\S+) (-?\d+°) · 湿度 (\d+)%(?: · 降水確率 (\d+)%)?$/,
+    (t, place, label, temperature, humidity, rain) =>
+      `${place}: ${t(label)} ${temperature} · Humidity ${humidity}%${
+        rain !== undefined ? ` · Chance of rain ${rain}%` : ''
+      }`,
+  ],
+
   [/^プルリクエスト · (.+)$/, 'Pull requests · $1'],
   [/^(.+) をレビュワーから外す$/, 'Remove $1 as a reviewer'],
   [

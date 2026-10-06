@@ -55,6 +55,41 @@
     }
   }
 
+  .team-weather {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+
+    .team-weather-temp {
+      color: var(--text-color);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    // The drawn icons are white on the card, give them color in the bar
+    .weather-icon {
+      .wx-cloud {
+        fill: #9fb3c8;
+      }
+      .wx-cloud.dark {
+        fill: #7f93a8;
+      }
+      .wx-fog rect {
+        fill: #9fb3c8;
+      }
+      .wx-flake {
+        fill: #8fb8e8;
+      }
+      .wx-moon path {
+        fill: #f2c94c;
+      }
+      .wx-star {
+        fill: #f2c94c;
+      }
+      .wx-drop {
+        stroke: #3f8fe0;
+      }
+    }
+  }
+
   .team-review-requests {
     flex: 0 0 auto;
     color: var(--ms-accent);
