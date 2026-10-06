@@ -15,7 +15,6 @@ import {
   getLocale,
   onLanguageChanged,
 } from '../../lib/i18n/language'
-import { Button } from '../lib/button'
 import { TextBox } from '../lib/text-box'
 import { Octicon } from '../octicons'
 import * as octicons from '../octicons/octicons.generated'
@@ -111,6 +110,18 @@ interface IWeatherCardState {
   readonly searchError: string | null
   /** Changes with the language so dates are formatted again */
   readonly locale: string
+  /** Whether the coming hours and days are shown */
+  readonly expanded: boolean
+}
+
+const expandedKey = 'ms2026-weather-expanded'
+
+function loadExpanded() {
+  try {
+    return localStorage.getItem(expandedKey) === '1'
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -132,6 +143,7 @@ export class WeatherCard extends React.Component<{}, IWeatherCardState> {
       searching: false,
       searchError: null,
       locale: getLocale(),
+      expanded: loadExpanded(),
     }
   }
 
@@ -237,7 +249,7 @@ export class WeatherCard extends React.Component<{}, IWeatherCardState> {
       <WeatherIcon
         kind={hour.condition.kind}
         isDay={hour.isDay}
-        size={26}
+        size={20}
         animated={false}
       />
       <span className="weather-hour-temp">
@@ -273,7 +285,7 @@ export class WeatherCard extends React.Component<{}, IWeatherCardState> {
         <WeatherIcon
           kind={day.condition.kind}
           isDay={true}
-          size={24}
+          size={18}
           animated={false}
         />
         <span
@@ -350,86 +362,164 @@ export class WeatherCard extends React.Component<{}, IWeatherCardState> {
     )
   }
 
-  private renderForecast(forecast: IWeatherForecast) {
+  private onToggleExpanded = () => {
+    const expanded = !this.state.expanded
+    try {
+      localStorage.setItem(expandedKey, expanded ? '1' : '0')
+    } catch {}
+    this.setState({ expanded })
+  }
+
+  private renderLocationButton() {
+    const { weather, pickerOpen } = this.state
+    return (
+      <button
+        type="button"
+        className="weather-location"
+        onClick={this.onTogglePicker}
+        aria-expanded={pickerOpen}
+      >
+        <span translate="no">{weather.locations[0].name}</span>
+        <Octicon
+          className="weather-location-chevron"
+          symbol={pickerOpen ? octicons.chevronUp : octicons.chevronDown}
+        />
+      </button>
+    )
+  }
+
+  /** The one line summary which is always shown */
+  private renderSummary(forecast: IWeatherForecast | null) {
+    const { loading, error } = this.state.weather
+
+    if (forecast === null) {
+      return (
+        <div className="weather-bar">
+          <span className="weather-bar-icon placeholder" />
+          <div className="weather-bar-main">
+            {error !== null && !loading ? (
+              <span className="weather-bar-error">
+                天気を取得できませんでした。
+                <button
+                  type="button"
+                  className="weather-link"
+                  onClick={this.onRefresh}
+                >
+                  再試行
+                </button>
+              </span>
+            ) : (
+              <span className="weather-shimmer" aria-busy="true" />
+            )}
+            {this.renderLocationButton()}
+          </div>
+        </div>
+      )
+    }
+
     const { current, daily } = forecast
     const today = daily.at(0)
 
     return (
-      <>
-        <div className="weather-now">
-          <WeatherIcon
-            className="weather-now-icon"
-            kind={current.condition.kind}
-            isDay={current.isDay}
-            size={92}
-          />
-          <div className="weather-now-main">
-            <div className="weather-now-temp">
-              {Math.round(current.temperature)}
-              <span className="weather-now-degree">°</span>
-            </div>
-            <div className="weather-now-label">{current.condition.label}</div>
-          </div>
-          <dl className="weather-stats">
-            <div className="weather-stat">
-              <dt>
-                <StatIcon kind="humidity" />
-                湿度
-              </dt>
-              <dd>{current.humidity}%</dd>
-            </div>
-            <div className="weather-stat">
-              <dt>
-                <StatIcon kind="rain" />
-                降水確率
-              </dt>
-              <dd>{formatPercent(current.precipitationProbability)}</dd>
-            </div>
-            {today !== undefined && (
-              <div className="weather-stat">
-                <dt>
-                  <StatIcon kind="range" />
-                  最高 / 最低
-                </dt>
-                <dd>
-                  {formatTemperature(today.temperatureMax)} /{' '}
-                  {formatTemperature(today.temperatureMin)}
-                </dd>
-              </div>
-            )}
-          </dl>
+      <div className="weather-bar">
+        <WeatherIcon
+          className="weather-bar-icon"
+          kind={current.condition.kind}
+          isDay={current.isDay}
+          size={40}
+        />
+        <div className="weather-bar-main">
+          <span className="weather-bar-temp">
+            {formatTemperature(current.temperature)}
+          </span>
+          <span className="weather-bar-text">
+            <span className="weather-bar-label">{current.condition.label}</span>
+            {this.renderLocationButton()}
+          </span>
         </div>
-        <ul className="weather-hourly" aria-label="1時間ごとの予報">
-          {forecast.hourly.map(this.renderHour)}
-        </ul>
-        <ul className="weather-daily" aria-label="週間予報">
-          {daily.map(this.renderDay)}
-        </ul>
-      </>
+        <dl className="weather-chips">
+          <div className="weather-chip">
+            <dt>
+              <StatIcon kind="humidity" />
+              <span className="sr-only">湿度</span>
+            </dt>
+            <dd>{current.humidity}%</dd>
+          </div>
+          <div className="weather-chip">
+            <dt>
+              <StatIcon kind="rain" />
+              <span className="sr-only">降水確率</span>
+            </dt>
+            <dd>{formatPercent(current.precipitationProbability)}</dd>
+          </div>
+          {today !== undefined && (
+            <div className="weather-chip range">
+              <dt>
+                <StatIcon kind="range" />
+                <span className="sr-only">最高 / 最低</span>
+              </dt>
+              <dd>
+                {formatTemperature(today.temperatureMax)}
+                <span className="weather-chip-low">
+                  {formatTemperature(today.temperatureMin)}
+                </span>
+              </dd>
+            </div>
+          )}
+        </dl>
+        <button
+          type="button"
+          className="weather-expand"
+          onClick={this.onToggleExpanded}
+          aria-expanded={this.state.expanded}
+          aria-label="詳しい予報"
+        >
+          <Octicon
+            symbol={
+              this.state.expanded ? octicons.chevronUp : octicons.chevronDown
+            }
+          />
+        </button>
+      </div>
     )
   }
 
-  private renderPlaceholder() {
-    const { loading, error } = this.state.weather
-    if (error !== null && !loading) {
-      return (
-        <div className="weather-message">
-          <p>天気を取得できませんでした。</p>
-          <Button onClick={this.onRefresh}>再試行</Button>
-        </div>
-      )
-    }
+  /** The coming hours and days, shown when expanded */
+  private renderDetails(forecast: IWeatherForecast) {
+    const { loading } = this.state.weather
+
     return (
-      <div className="weather-message loading" aria-busy="true">
-        <span className="weather-shimmer" />
-        <span className="weather-shimmer short" />
+      <div className="weather-details">
+        <ul className="weather-hourly" aria-label="1時間ごとの予報">
+          {forecast.hourly.slice(0, 12).map(this.renderHour)}
+        </ul>
+        <ul className="weather-daily" aria-label="週間予報">
+          {forecast.daily.map(this.renderDay)}
+        </ul>
+        <div className="weather-footer">
+          <span className="weather-updated">
+            {new Intl.DateTimeFormat(this.state.locale, {
+              hour: '2-digit',
+              minute: '2-digit',
+            }).format(forecast.fetchedAt)}{' '}
+            更新
+          </span>
+          <button
+            type="button"
+            className={classNames('weather-refresh', { spinning: loading })}
+            onClick={this.onRefresh}
+            aria-label="天気を更新"
+          >
+            <Octicon symbol={octicons.sync} />
+          </button>
+        </div>
       </div>
     )
   }
 
   public render() {
-    const { weather, pickerOpen } = this.state
-    const { forecast, loading } = weather
+    const { weather, pickerOpen, expanded } = this.state
+    const { forecast } = weather
     const location = weather.locations[0]
     // Show the forecast only for the place it was fetched for
     const shown =
@@ -441,47 +531,15 @@ export class WeatherCard extends React.Component<{}, IWeatherCardState> {
       <section
         className={classNames(
           'weather-card',
-          shown !== null ? getSkyClassName(shown) : 'sky-loading'
+          shown !== null ? getSkyClassName(shown) : 'sky-loading',
+          { expanded }
         )}
         aria-label="天気"
       >
         <div className="weather-sky-decoration" aria-hidden="true" />
-        <header className="weather-header">
-          <button
-            type="button"
-            className="weather-location"
-            onClick={this.onTogglePicker}
-            aria-expanded={pickerOpen}
-          >
-            <Octicon symbol={octicons.location} />
-            <span translate="no">{location.name}</span>
-            <Octicon
-              className="weather-location-chevron"
-              symbol={pickerOpen ? octicons.chevronUp : octicons.chevronDown}
-            />
-          </button>
-          <span className="weather-header-end">
-            {shown !== null && (
-              <span className="weather-updated">
-                {new Intl.DateTimeFormat(this.state.locale, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }).format(shown.fetchedAt)}{' '}
-                更新
-              </span>
-            )}
-            <button
-              type="button"
-              className={classNames('weather-refresh', { spinning: loading })}
-              onClick={this.onRefresh}
-              aria-label="天気を更新"
-            >
-              <Octicon symbol={octicons.sync} />
-            </button>
-          </span>
-        </header>
+        {this.renderSummary(shown)}
         {pickerOpen && this.renderPicker()}
-        {shown !== null ? this.renderForecast(shown) : this.renderPlaceholder()}
+        {expanded && shown !== null && this.renderDetails(shown)}
       </section>
     )
   }
