@@ -1,0 +1,38 @@
+name: macOS test build
+
+on:
+  push:
+    branches:
+      - 'build/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: macOS arm64
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-ci-environment
+        with:
+          node-version: 24.19.0
+          arch: arm64
+      - name: Build app
+        run: yarn build:prod
+        env:
+          npm_config_arch: arm64
+          TARGET_ARCH: arm64
+      - name: Package app
+        run: yarn package
+        env:
+          npm_config_arch: arm64
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macOS-arm64
+          path: dist/GitHub Desktop-arm64.zip
+          if-no-files-found: error
