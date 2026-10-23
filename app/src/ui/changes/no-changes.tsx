@@ -2,6 +2,7 @@ import * as React from 'react'
 
 import { getHostingServiceName } from '../../lib/gitea'
 import { HomeHeader } from './home-header'
+import { WeatherCard } from '../weather/weather-card'
 import { Repository } from '../../models/repository'
 import { LinkButton } from '../lib/link-button'
 import { MenuIDs } from '../../models/menu-ids'
@@ -41,7 +42,11 @@ function formatMenuItemLabel(text: string) {
     // character. A literal ampersand is escaped by putting another ampersand
     // in front of it (&&). Here we strip single ampersands and unescape
     // double ampersands. Example: "&Push && Pull" becomes "Push & Pull".
-    return text.replace(/&?&/g, m => (m.length > 1 ? '&' : ''))
+    // Translated labels show the access key in parentheses, e.g.
+    // "プッシュ(&U)", which isn't useful outside of the menu.
+    return text
+      .replace(/\(&[^&)]\)/g, '')
+      .replace(/&?&/g, m => (m.length > 1 ? '&' : ''))
   }
 
   return text
@@ -282,6 +287,18 @@ export class NoChanges extends React.Component<
     return gitHubRepository === null
       ? 'the remote'
       : getHostingServiceName(gitHubRepository.endpoint)
+  }
+
+  private renderPullRequestList() {
+    if (this.props.repository.gitHubRepository === null) {
+      return null
+    }
+
+    return this.renderMenuBackedAction(
+      'show-pull-request-list',
+      'リポジトリのプルリクエスト',
+      'ブランチに関係なく、すべてのプルリクエストを確認してレビュワーの設定やマージができます。'
+    )
   }
 
   private renderViewOnGitHub() {
@@ -757,6 +774,7 @@ export class NoChanges extends React.Component<
           {this.renderViewStashAction() || this.renderRemoteAction()}
         </SuggestedActionGroup>
         <SuggestedActionGroup>
+          {this.renderPullRequestList()}
           {this.renderOpenInExternalEditor()}
           {this.renderShowInFileManager()}
           {this.renderViewOnGitHub()}
@@ -783,6 +801,7 @@ export class NoChanges extends React.Component<
       <div className="changes-interstitial">
         <div className="content">
           <HomeHeader />
+          <WeatherCard />
           {this.renderActions()}
         </div>
       </div>

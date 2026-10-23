@@ -1,8 +1,13 @@
 import * as React from 'react'
 import {
   API,
+  IAPIComment,
+  IAPIIdentity,
+  IAPILabel,
   IAPIPullRequestDetails,
+  IAPIPullRequestReview,
   PullRequestMergeMethod,
+  PullRequestReviewEvent,
 } from '../../lib/api'
 import { getPullRequestURL } from '../../lib/gitea'
 import { Account } from '../../models/account'
@@ -21,6 +26,16 @@ import { Ref } from '../lib/ref'
 import { Select } from '../lib/select'
 import { Octicon } from '../octicons'
 import * as octicons from '../octicons/octicons.generated'
+import { getReviewers, ReviewerPicker } from './reviewer-picker'
+import { ITag, TagPicker } from './tag-picker'
+import {
+  getConversation,
+  PullRequestConversation,
+} from './pull-request-conversation'
+import {
+  getPullRequestStatus,
+  pullRequestStatusLabels,
+} from './pull-request-status'
 
 interface IPullRequestDetailsDialogProps {
   readonly dispatcher: Dispatcher
@@ -38,6 +53,12 @@ interface IPullRequestDetailsDialogProps {
 
 interface IPullRequestDetailsDialogState {
   readonly pullRequest: IAPIPullRequestDetails | null
+  readonly reviews: ReadonlyArray<IAPIPullRequestReview>
+  readonly comments: ReadonlyArray<IAPIComment>
+  /** The users who can review or be assigned, null while loading */
+  readonly reviewerCandidates: ReadonlyArray<IAPIIdentity> | null
+  /** The labels of the repository, null while loading */
+  readonly labels: ReadonlyArray<IAPILabel> | null
   readonly loading: boolean
   readonly busy: boolean
   readonly error: string | null
@@ -45,29 +66,13 @@ interface IPullRequestDetailsDialogState {
   readonly deleteBranch: boolean
 }
 
-type PullRequestStatus = 'open' | 'draft' | 'merged' | 'closed'
-
 const mergeMethodLabels: Record<PullRequestMergeMethod, string> = {
   merge: 'マージコミットを作成',
   squash: 'スカッシュしてマージ',
   rebase: 'リベースしてマージ',
 }
 
-function getStatus(pr: IAPIPullRequestDetails): PullRequestStatus {
-  if (pr.merged) {
-    return 'merged'
-  } else if (pr.state === 'closed') {
-    return 'closed'
-  }
-  return pr.draft ? 'draft' : 'open'
-}
-
-const statusLabels: Record<PullRequestStatus, string> = {
-  open: 'オープン',
-  draft: '下書き',
-  merged: 'マージ済み',
-  closed: 'クローズ',
-}
+const getStatus = getPullRequestStatus
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : `${e}`)
 
@@ -85,6 +90,10 @@ export class PullRequestDetailsDialog extends React.Component<
     super(props)
     this.state = {
       pullRequest: null,
+      reviews: [],
+      comments: [],
+      reviewerCandidates: null,
+      labels: null,
       loading: true,
       busy: false,
       error: null,
@@ -117,21 +126,266 @@ export class PullRequestDetailsDialog extends React.Component<
       return
     }
 
+    const { owner, name } = this.props
+
+    // Reviews and reviewers are extras, don't fail when they can't be loaded
+    api
+      .fetchReviewerCandidates(owner, name)
+      .catch(e => {
+        log.warn('Failed to load the reviewer candidates', e)
+        return []
+      })
+      .then(reviewerCandidates => {
+        if (this.mounted) {
+          this.setState({ reviewerCandidates })
+        }
+      })
+
+    api
+      .fetchLabels(owner, name)
+      .catch(e => {
+        log.warn('Failed to load the labels', e)
+        return []
+      })
+      .then(labels => {
+        if (this.mounted) {
+          this.setState({ labels })
+        }
+      })
+
     try {
-      const { owner, name, pullRequestNumber } = this.props
-      const pullRequest = await api.fetchPullRequestDetails(
-        owner,
-        name,
-        pullRequestNumber
-      )
+      const state = await this.fetchPullRequest(api)
       if (this.mounted) {
-        this.setState({ pullRequest, loading: false })
+        this.setState({ ...state, loading: false })
       }
     } catch (e) {
       if (this.mounted) {
         this.setState({ loading: false, error: errorMessage(e) })
       }
     }
+  }
+
+  /** The pull request with its reviews and comments */
+  private async fetchPullRequest(api: API) {
+    const { owner, name, pullRequestNumber: n } = this.props
+    const [pullRequest, reviews, comments] = await Promise.all([
+      api.fetchPullRequestDetails(owner, name, n),
+      // Reviews and comments are extras, don't fail when they can't be loaded
+      api.fetchAllPullRequestReviews(owner, name, n).catch(e => {
+        log.warn('Failed to load the pull request reviews', e)
+        return []
+      }),
+      api.fetchPullRequestConversation(owner, name, n).catch(e => {
+        log.warn('Failed to load the pull request comments', e)
+        return []
+      }),
+    ])
+    return { pullRequest, reviews, comments }
+  }
+
+  /**
+   * Change the pull request and show the result.
+   *
+   * @returns whether the change succeeded
+   */
+  private async update(
+    change: (api: API) => Promise<void>,
+    failure: string
+  ): Promise<boolean> {
+    const { api } = this
+    if (api === null) {
+      return false
+    }
+
+    this.setState({ busy: true, error: null })
+    try {
+      await change(api)
+      const state = await this.fetchPullRequest(api)
+      if (this.mounted) {
+        this.setState({ ...state, busy: false })
+      }
+      return true
+    } catch (e) {
+      if (this.mounted) {
+        this.setState({
+          busy: false,
+          error: `${failure}: ${errorMessage(e)}`,
+        })
+      }
+      return false
+    }
+  }
+
+  private onAddReviewer = (login: string) => {
+    const { owner, name, pullRequestNumber: n } = this.props
+    return this.update(
+      api => api.requestReviewers(owner, name, n, [login]),
+      'レビュワーを変更できませんでした'
+    )
+  }
+
+  private onRemoveReviewer = (login: string) => {
+    const { owner, name, pullRequestNumber: n } = this.props
+    return this.update(
+      api => api.removeRequestedReviewers(owner, name, n, [login]),
+      'レビュワーを変更できませんでした'
+    )
+  }
+
+  private setAssignees(logins: ReadonlyArray<string>) {
+    const { owner, name, pullRequestNumber: n } = this.props
+    return this.update(
+      api => api.setPullRequestAssignees(owner, name, n, logins),
+      '担当者を変更できませんでした'
+    )
+  }
+
+  private get assignees() {
+    return (this.state.pullRequest?.assignees ?? []).map(a => a.login)
+  }
+
+  private onAddAssignee = (login: string) =>
+    this.setAssignees([...this.assignees, login])
+
+  private onRemoveAssignee = (login: string) =>
+    this.setAssignees(this.assignees.filter(a => a !== login))
+
+  private setLabels(labels: ReadonlyArray<IAPILabel>) {
+    const { owner, name, pullRequestNumber: n } = this.props
+    return this.update(
+      api => api.setPullRequestLabels(owner, name, n, labels),
+      'ラベルを変更できませんでした'
+    )
+  }
+
+  private get currentLabels() {
+    return this.state.pullRequest?.labels ?? []
+  }
+
+  private onAddLabel = (key: string) => {
+    const label = this.state.labels?.find(l => `${l.id}` === key)
+    if (label !== undefined) {
+      this.setLabels([...this.currentLabels, label])
+    }
+  }
+
+  private onRemoveLabel = (key: string) =>
+    this.setLabels(this.currentLabels.filter(l => `${l.id}` !== key))
+
+  private onComment = (body: string) => {
+    const { owner, name, pullRequestNumber: n } = this.props
+    return this.update(
+      api => api.createPullRequestComment(owner, name, n, body),
+      'コメントできませんでした'
+    )
+  }
+
+  private onReview = (event: PullRequestReviewEvent, body: string) => {
+    const { owner, name, pullRequestNumber: n } = this.props
+    return this.update(
+      api => api.submitPullRequestReview(owner, name, n, event, body),
+      'レビューを送信できませんでした'
+    )
+  }
+
+  private renderAssigneesAndLabels(pr: IAPIPullRequestDetails) {
+    const { reviewerCandidates, labels, busy } = this.state
+    const labelTag = (l: IAPILabel): ITag => ({
+      key: `${l.id}`,
+      label: l.name,
+      color: `#${l.color.replace(/^#/, '')}`,
+    })
+
+    return (
+      <div className="pr-side-sections">
+        <div className="pr-section">
+          <h3>
+            <Octicon symbol={octicons.person} />
+            担当者
+          </h3>
+          <TagPicker
+            tags={(pr.assignees ?? []).map(a => ({
+              key: a.login,
+              label: a.login,
+            }))}
+            options={
+              reviewerCandidates?.map(c => ({
+                key: c.login,
+                label: c.login,
+              })) ?? null
+            }
+            addLabel="担当者を追加"
+            emptyText="担当者はいません。"
+            onAdd={this.onAddAssignee}
+            onRemove={this.onRemoveAssignee}
+            disabled={busy}
+          />
+        </div>
+        <div className="pr-section">
+          <h3>
+            <Octicon symbol={octicons.tag} />
+            ラベル
+          </h3>
+          <TagPicker
+            tags={(pr.labels ?? []).map(labelTag)}
+            options={labels?.map(labelTag) ?? null}
+            addLabel="ラベルを追加"
+            emptyText="ラベルはありません。"
+            onAdd={this.onAddLabel}
+            onRemove={this.onRemoveLabel}
+            disabled={busy}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  private renderConversation(pr: IAPIPullRequestDetails, isOpen: boolean) {
+    const { comments, reviews, busy } = this.state
+    const me = this.props.account?.login
+
+    return (
+      <div className="pr-section">
+        <h3>
+          <Octicon symbol={octicons.comment} />
+          会話
+        </h3>
+        <PullRequestConversation
+          items={getConversation(comments, reviews)}
+          canReview={isOpen && me !== undefined && me !== pr.user.login}
+          onComment={this.onComment}
+          onReview={this.onReview}
+          disabled={busy}
+        />
+      </div>
+    )
+  }
+
+  private renderReviewers(pr: IAPIPullRequestDetails, isOpen: boolean) {
+    const { reviews, reviewerCandidates, busy } = this.state
+    const reviewers = getReviewers(
+      pr.user.login,
+      reviews,
+      pr.requested_reviewers ?? []
+    )
+
+    return (
+      <div className="pr-section pr-reviewers">
+        <h3>
+          <Octicon symbol={octicons.people} />
+          レビュワー
+        </h3>
+        <ReviewerPicker
+          reviewers={reviewers}
+          candidates={
+            reviewerCandidates?.filter(c => c.login !== pr.user.login) ?? null
+          }
+          onAdd={isOpen ? this.onAddReviewer : undefined}
+          onRemove={isOpen ? this.onRemoveReviewer : undefined}
+          disabled={busy}
+        />
+      </div>
+    )
   }
 
   /** The branch to delete after merging, if it lives in the same repository */
@@ -302,12 +556,17 @@ export class PullRequestDetailsDialog extends React.Component<
     }
 
     const status = getStatus(pullRequest)
+    const isOpen = status === 'open' || status === 'draft'
 
     return (
       <>
         <div className="pr-meta">
-          <span className={`pr-status ${status}`}>{statusLabels[status]}</span>
-          <span className="pr-author">{pullRequest.user.login}</span>
+          <span className={`pr-status ${status}`}>
+            {pullRequestStatusLabels[status]}
+          </span>
+          <span className="pr-author" translate="no">
+            {pullRequest.user.login}
+          </span>
           <span className="pr-branches">
             <Ref>{pullRequest.head.ref}</Ref>
             <Octicon symbol={octicons.arrowRight} />
@@ -316,14 +575,15 @@ export class PullRequestDetailsDialog extends React.Component<
         </div>
         <div className="pr-body">
           {pullRequest.body.trim().length > 0 ? (
-            pullRequest.body
+            <span translate="no">{pullRequest.body}</span>
           ) : (
             <span className="pr-body-empty">説明はありません。</span>
           )}
         </div>
-        {status === 'open' || status === 'draft'
-          ? this.renderMergeOptions(pullRequest)
-          : null}
+        {this.renderReviewers(pullRequest, isOpen)}
+        {this.renderAssigneesAndLabels(pullRequest)}
+        {this.renderConversation(pullRequest, isOpen)}
+        {isOpen ? this.renderMergeOptions(pullRequest) : null}
       </>
     )
   }

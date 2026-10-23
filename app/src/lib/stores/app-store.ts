@@ -146,6 +146,7 @@ import {
   deleteToken,
   IAPICreatePushProtectionBypassResponse,
   fetchGiteaUser,
+  IAPIIdentity,
 } from '../api'
 import {
   getGiteaAPIEndpoint,
@@ -154,6 +155,8 @@ import {
   getPullRequestURL,
   isGiteaEndpoint,
 } from '../gitea'
+import { getLanguage, onLanguageChanged } from '../i18n/language'
+import { IReviewRequestSource, reviewRequests } from '../review-requests'
 import { shell } from '../app-shell'
 import {
   CompareAction,
@@ -820,6 +823,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
     this.wireupIpcEventHandlers()
     this.wireupStoreEventHandlers()
     getAppMenu()
+    onLanguageChanged(() => this.updateMenuLabelsForSelectedRepository())
     this.tutorialAssessor = new OnboardingTutorialAssessor(
       this.getResolvedExternalEditor
     )
@@ -2907,6 +2911,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
     } = this
 
     const labels: MenuLabelsEvent = {
+      language: getLanguage(),
       selectedShell: useCustomShell ? null : selectedShell,
       selectedExternalEditor: useCustomEditor ? null : selectedExternalEditor,
       askForConfirmationOnRepositoryRemoval,
@@ -8634,11 +8639,127 @@ export class AppStore extends TypedBaseStore<IAppState> {
    *
    * @returns where the pull request was created
    */
+  /**
+   * The repository whose pull requests to show and which new pull requests
+   * are opened against: the parent when contributing from a fork.
+   */
+  private getPullRequestTarget(repository: Repository) {
+    const { gitHubRepository } = repository
+    if (gitHubRepository === null) {
+      return null
+    }
+    const isFork = isForkedRepositoryContributingToParent(repository)
+    const target =
+      isFork && gitHubRepository.parent !== null
+        ? gitHubRepository.parent
+        : gitHubRepository
+    return { owner: target.owner.login, name: target.name }
+  }
+
+  /** Show all the pull requests of the repository. */
+  public async _showPullRequestList(repository: Repository): Promise<void> {
+    const target = this.getPullRequestTarget(repository)
+    if (!isRepositoryWithGitHubRepository(repository) || target === null) {
+      return
+    }
+
+    // Without an account the list can't be loaded, so show it on the web
+    if (getAccountForRepository(this.accounts, repository) === null) {
+      const { htmlURL } = repository.gitHubRepository
+      if (htmlURL !== null) {
+        await this._openInBrowser(`${htmlURL}/pulls`)
+      }
+      return
+    }
+
+    return this._showPopup({
+      type: PopupType.PullRequestList,
+      repository,
+      ...target,
+    })
+  }
+
+  /**
+   * Start looking for pull requests waiting for the user's review in all
+   * their repositories, see lib/review-requests.
+   */
+  public _startWatchingReviewRequests() {
+    reviewRequests.start(
+      () => this.getReviewRequestSources(),
+      request =>
+        this._showPopup({
+          type: PopupType.PullRequestDetails,
+          repository: request.source.repository,
+          owner: request.source.owner,
+          name: request.source.name,
+          pullRequestNumber: request.number,
+        })
+    )
+  }
+
+  private getReviewRequestSources(): ReadonlyArray<IReviewRequestSource> {
+    const sources = new Array<IReviewRequestSource>()
+    for (const repository of this.repositories) {
+      if (!isRepositoryWithGitHubRepository(repository)) {
+        continue
+      }
+      const account = getAccountForRepository(this.accounts, repository)
+      const target = this.getPullRequestTarget(repository)
+      if (account !== null && target !== null) {
+        sources.push({ repository, account, ...target })
+      }
+    }
+    return sources
+  }
+
+  /**
+   * Show the pull requests waiting for the user's review, in the selected
+   * repository if it has any.
+   */
+  public async _showReviewRequests(): Promise<void> {
+    const { requests } = reviewRequests
+    const selected = this.selectedRepository
+    const request =
+      requests.find(r => r.source.repository.id === selected?.id) ??
+      requests.at(0)
+
+    if (request === undefined) {
+      return
+    }
+
+    const { repository, owner, name } = request.source
+    return this._showPopup({
+      type: PopupType.PullRequestList,
+      repository,
+      owner,
+      name,
+      reviewRequestsOnly: true,
+    })
+  }
+
+  /** The users who can be asked to review pull requests in the repository. */
+  public async _fetchReviewerCandidates(
+    repository: Repository
+  ): Promise<ReadonlyArray<IAPIIdentity>> {
+    const target = this.getPullRequestTarget(repository)
+    const account = getAccountForRepository(this.accounts, repository)
+    if (target === null || account === null) {
+      return []
+    }
+    const candidates = await API.fromAccount(account).fetchReviewerCandidates(
+      target.owner,
+      target.name
+    )
+    // You can't review your own pull request
+    return candidates.filter(c => c.login !== account.login)
+  }
+
   public async _createPullRequestInApp(
     repository: Repository,
     baseBranch: Branch,
     title: string,
-    body: string
+    body: string,
+    reviewers: ReadonlyArray<string> = []
   ): Promise<{ owner: string; name: string; pullRequestNumber: number }> {
     const { gitHubRepository } = repository
     if (gitHubRepository === null) {
@@ -8676,11 +8797,28 @@ export class AppStore extends TypedBaseStore<IAppState> {
       ? `${gitHubRepository.owner.login}:${branch.upstreamWithoutRemote}`
       : branch.upstreamWithoutRemote
 
-    const pr = await API.fromAccount(account).createPullRequest(
-      target.owner.login,
-      target.name,
-      { title, body, head, base: baseBranch.nameWithoutRemote }
-    )
+    const api = API.fromAccount(account)
+    const pr = await api.createPullRequest(target.owner.login, target.name, {
+      title,
+      body,
+      head,
+      base: baseBranch.nameWithoutRemote,
+    })
+
+    if (reviewers.length > 0) {
+      try {
+        await api.requestReviewers(
+          target.owner.login,
+          target.name,
+          pr.number,
+          reviewers
+        )
+      } catch (e) {
+        // The pull request exists, reviewers can still be added to it from
+        // the dialog shown next
+        log.error('Failed to request reviewers', e)
+      }
+    }
 
     this.statsStore.increment('createPullRequestCount')
     await this._refreshPullRequests(repository)

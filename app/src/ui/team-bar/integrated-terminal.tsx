@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import type { IpcRendererEvent } from 'electron'
 import * as ipcRenderer from '../../lib/ipc-renderer'
 import { getMonospaceFontFamily } from '../get-monospace-font-family'
+import { getLanguage } from '../../lib/i18n/language'
 
 interface IIntegratedTerminalProps {
   /** The directory to start the shell in, null for the home directory */
@@ -95,7 +96,11 @@ export class IntegratedTerminal extends React.Component<IIntegratedTerminalProps
       }
     } catch (e) {
       log.error('Failed to start the integrated terminal', e)
-      terminal.writeln('ターミナルを起動できませんでした。')
+      terminal.writeln(
+        getLanguage() === 'ja'
+          ? 'ターミナルを起動できませんでした。'
+          : "Couldn't start the terminal."
+      )
       terminal.writeln(`${e}`)
     }
   }
@@ -167,9 +172,11 @@ export class IntegratedTerminal extends React.Component<IIntegratedTerminalProps
 
     this.sessionId = null
     this.terminal?.writeln('')
-    this.terminal?.writeln(
-      `\x1b[2m[プロセスが終了しました (コード ${exitCode})]\x1b[0m`
-    )
+    const message =
+      getLanguage() === 'ja'
+        ? `プロセスが終了しました (コード ${exitCode})`
+        : `Process exited with code ${exitCode}`
+    this.terminal?.writeln(`\x1b[2m[${message}]\x1b[0m`)
     this.props.onExit?.(exitCode)
   }
 

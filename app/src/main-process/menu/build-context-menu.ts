@@ -1,5 +1,7 @@
 import { ISerializableMenuItem } from '../../lib/menu-item'
 import { Menu, MenuItem } from 'electron'
+import { getRoleLabel } from '../../lib/i18n/translate'
+import { getMenuLanguage } from './build-default-menu'
 
 /**
  * Gets a value indicating whether or not two roles are considered
@@ -24,7 +26,21 @@ function getEditMenuItems(): ReadonlyArray<MenuItem> {
   // We don't use styled inputs anywhere at the moment
   // so let's skip this for now and when/if we do we
   // can make it configurable from the callee
-  return items.filter(x => !roleEquals(x.role, 'pasteandmatchstyle'))
+  return items
+    .filter(x => !roleEquals(x.role, 'pasteandmatchstyle'))
+    .map(x => {
+      const label =
+        x.role !== undefined
+          ? getRoleLabel(x.role, getMenuLanguage(), __APP_NAME__)
+          : undefined
+      return label === undefined
+        ? x
+        : new MenuItem({
+            role: x.role,
+            label,
+            accelerator: x.accelerator ?? undefined,
+          })
+    })
 }
 
 /**

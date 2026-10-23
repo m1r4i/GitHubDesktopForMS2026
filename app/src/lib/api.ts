@@ -664,7 +664,44 @@ export interface IAPIPullRequestDetails extends IAPIPullRequest {
   /** Whether the pull request can be merged, null while being computed */
   readonly mergeable?: boolean | null
   readonly merged?: boolean
+  /** When the pull request was merged (also present in lists) */
+  readonly merged_at?: string | null
   readonly html_url?: string
+  /** Users asked to review the pull request who haven't reviewed it yet */
+  readonly requested_reviewers?: ReadonlyArray<IAPIIdentity> | null
+  readonly assignees?: ReadonlyArray<IAPIIdentity> | null
+  readonly labels?: ReadonlyArray<IAPILabel> | null
+}
+
+/** A label of an issue or pull request */
+export interface IAPILabel {
+  readonly id: number
+  readonly name: string
+  /** The color as hex without a leading #, e.g. "d73a4a" */
+  readonly color: string
+}
+
+/** The verdict of a review submitted with API.submitPullRequestReview */
+export type PullRequestReviewEvent = 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
+
+/** Which pull requests to list, see API.fetchPullRequestsPage */
+export type PullRequestListState = 'open' | 'closed' | 'all'
+
+/**
+ * The state of a review normalized between GitHub and Gitea, which calls
+ * them REQUEST_CHANGES, COMMENT and REQUEST_REVIEW (a pending request).
+ */
+function normalizeReviewState(state: string): IAPIPullRequestReview['state'] {
+  switch (state) {
+    case 'REQUEST_CHANGES':
+      return 'CHANGES_REQUESTED'
+    case 'COMMENT':
+      return 'COMMENTED'
+    case 'REQUEST_REVIEW':
+      return 'PENDING'
+    default:
+      return state as IAPIPullRequestReview['state']
+  }
 }
 
 /** How to merge a pull request */
@@ -1416,6 +1453,198 @@ export class API {
         log.warn(`mergePullRequest: unable to delete branch ${deleteBranch}`)
       }
     }
+  }
+
+  /**
+   * Fetch a page of the pull requests in a repository, most recently updated
+   * first.
+   */
+  public async fetchPullRequestsPage(
+    owner: string,
+    name: string,
+    state: PullRequestListState,
+    page: number,
+    perPage = 30
+  ): Promise<ReadonlyArray<IAPIPullRequestDetails>> {
+    const url = urlWithQueryString(`repos/${owner}/${name}/pulls`, {
+      state,
+      page: `${page}`,
+      ...(this.isGitea
+        ? { limit: `${perPage}`, sort: 'recentupdate' }
+        : { per_page: `${perPage}`, sort: 'updated', direction: 'desc' }),
+    })
+    const response = await this.ghRequest('GET', url, { reloadCache: true })
+    const prs = await parsedResponse<IAPIPullRequestDetails[]>(response)
+    return this.isGitea
+      ? prs.map(pr => ({ ...pr, ...this.normalizeGiteaPullRequest(pr) }))
+      : prs
+  }
+
+  /**
+   * Fetch all the pull requests in a repository (not just a page), most
+   * recently updated first.
+   */
+  public async fetchAllPullRequests(
+    owner: string,
+    name: string,
+    state: PullRequestListState
+  ): Promise<ReadonlyArray<IAPIPullRequestDetails>> {
+    const url = urlWithQueryString(`repos/${owner}/${name}/pulls`, {
+      state,
+      ...(this.isGitea
+        ? { sort: 'recentupdate' }
+        : { sort: 'updated', direction: 'desc' }),
+    })
+    const prs = await this.fetchAll<IAPIPullRequestDetails>(url)
+    return this.isGitea
+      ? prs.map(pr => ({ ...pr, ...this.normalizeGiteaPullRequest(pr) }))
+      : prs
+  }
+
+  /**
+   * The conversation comments on a pull request (not those on its code),
+   * oldest first, bypassing the cache so new comments show up right away.
+   */
+  public async fetchPullRequestConversation(
+    owner: string,
+    name: string,
+    prNumber: number
+  ): Promise<ReadonlyArray<IAPIComment>> {
+    const url = urlWithQueryString(
+      `repos/${owner}/${name}/issues/${prNumber}/comments`,
+      this.isGitea ? { limit: '50' } : { per_page: '100' }
+    )
+    const response = await this.ghRequest('GET', url, { reloadCache: true })
+    return parsedResponse<IAPIComment[]>(response)
+  }
+
+  /** Comment on a pull request. */
+  public async createPullRequestComment(
+    owner: string,
+    name: string,
+    prNumber: number,
+    body: string
+  ): Promise<void> {
+    const response = await this.ghRequest(
+      'POST',
+      `repos/${owner}/${name}/issues/${prNumber}/comments`,
+      { body: { body } }
+    )
+    await ensureSuccessfulResponse(response)
+  }
+
+  /** Approve, request changes to or comment on a pull request. */
+  public async submitPullRequestReview(
+    owner: string,
+    name: string,
+    prNumber: number,
+    event: PullRequestReviewEvent,
+    body: string
+  ): Promise<void> {
+    // Gitea calls an approval APPROVED
+    const giteaEvent = event === 'APPROVE' ? 'APPROVED' : event
+    const response = await this.ghRequest(
+      'POST',
+      `repos/${owner}/${name}/pulls/${prNumber}/reviews`,
+      { body: { event: this.isGitea ? giteaEvent : event, body } }
+    )
+    await ensureSuccessfulResponse(response)
+  }
+
+  /** Replace the assignees of a pull request. */
+  public async setPullRequestAssignees(
+    owner: string,
+    name: string,
+    prNumber: number,
+    logins: ReadonlyArray<string>
+  ): Promise<void> {
+    const response = await this.ghRequest(
+      'PATCH',
+      `repos/${owner}/${name}/issues/${prNumber}`,
+      { body: { assignees: logins } }
+    )
+    await ensureSuccessfulResponse(response)
+  }
+
+  /** The labels which can be put on issues and pull requests. */
+  public async fetchLabels(
+    owner: string,
+    name: string
+  ): Promise<ReadonlyArray<IAPILabel>> {
+    return this.fetchAll<IAPILabel>(`repos/${owner}/${name}/labels`)
+  }
+
+  /** Replace the labels of a pull request. */
+  public async setPullRequestLabels(
+    owner: string,
+    name: string,
+    prNumber: number,
+    labels: ReadonlyArray<IAPILabel>
+  ): Promise<void> {
+    // GitHub identifies labels by name, Gitea by id
+    const response = await this.ghRequest(
+      'PUT',
+      `repos/${owner}/${name}/issues/${prNumber}/labels`,
+      {
+        body: {
+          labels: labels.map(l => (this.isGitea ? l.id : l.name)),
+        },
+      }
+    )
+    await ensureSuccessfulResponse(response)
+  }
+
+  /** The users who can be asked to review pull requests in a repository. */
+  public async fetchReviewerCandidates(
+    owner: string,
+    name: string
+  ): Promise<ReadonlyArray<IAPIIdentity>> {
+    return this.fetchAll<IAPIIdentity>(`repos/${owner}/${name}/assignees`)
+  }
+
+  /** All the reviews of a pull request, oldest first. */
+  public async fetchAllPullRequestReviews(
+    owner: string,
+    name: string,
+    prNumber: number
+  ): Promise<ReadonlyArray<IAPIPullRequestReview>> {
+    const url = urlWithQueryString(
+      `repos/${owner}/${name}/pulls/${prNumber}/reviews`,
+      this.isGitea ? { limit: '50' } : { per_page: '100' }
+    )
+    const response = await this.ghRequest('GET', url, { reloadCache: true })
+    const reviews = await parsedResponse<IAPIPullRequestReview[]>(response)
+    return reviews.map(r => ({ ...r, state: normalizeReviewState(r.state) }))
+  }
+
+  /** Ask users to review a pull request. */
+  public async requestReviewers(
+    owner: string,
+    name: string,
+    prNumber: number,
+    logins: ReadonlyArray<string>
+  ): Promise<void> {
+    const response = await this.ghRequest(
+      'POST',
+      `repos/${owner}/${name}/pulls/${prNumber}/requested_reviewers`,
+      { body: { reviewers: logins } }
+    )
+    await ensureSuccessfulResponse(response)
+  }
+
+  /** Withdraw review requests from a pull request. */
+  public async removeRequestedReviewers(
+    owner: string,
+    name: string,
+    prNumber: number,
+    logins: ReadonlyArray<string>
+  ): Promise<void> {
+    const response = await this.ghRequest(
+      'DELETE',
+      `repos/${owner}/${name}/pulls/${prNumber}/requested_reviewers`,
+      { body: { reviewers: logins } }
+    )
+    await ensureSuccessfulResponse(response)
   }
 
   /** Close a pull request without merging it. */

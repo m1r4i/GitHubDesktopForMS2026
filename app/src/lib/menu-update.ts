@@ -140,6 +140,7 @@ const allMenuIds: ReadonlyArray<MenuIDs> = [
   'about',
   'create-pull-request',
   'preview-pull-request',
+  'show-pull-request-list',
   'squash-and-merge-branch',
   'toggle-stashed-changes',
   'create-worktree',
@@ -315,6 +316,7 @@ function getRepositoryMenuBuilder(state: IAppState): MenuStateBuilder {
       'preview-pull-request',
       !branchIsUnborn && !onDetachedHead && isHostedOnGitHub
     )
+    menuStateBuilder.setEnabled('show-pull-request-list', isHostedOnGitHub)
 
     menuStateBuilder.setEnabled(
       'push',
@@ -358,6 +360,7 @@ function getRepositoryMenuBuilder(state: IAppState): MenuStateBuilder {
     menuStateBuilder.disable('view-repository-on-github')
     menuStateBuilder.disable('create-pull-request')
     menuStateBuilder.disable('preview-pull-request')
+    menuStateBuilder.disable('show-pull-request-list')
     if (
       selectedState &&
       selectedState.type === SelectionType.MissingRepository

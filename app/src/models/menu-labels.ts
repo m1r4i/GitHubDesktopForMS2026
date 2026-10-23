@@ -1,6 +1,13 @@
 import { Shell } from '../lib/shells'
+import { Language } from '../lib/i18n/translate'
 
 export type MenuLabelsEvent = {
+  /**
+   * The language to show the menus in. Defaults to Japanese, see
+   * app/src/lib/i18n.
+   */
+  readonly language?: Language
+
   /**
    * The name of the service hosting the selected repository, e.g. 'GitHub'
    * or 'Gitea', used in labels like "View on GitHub". Defaults to 'GitHub'.

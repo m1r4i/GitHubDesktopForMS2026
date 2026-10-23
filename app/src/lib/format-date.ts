@@ -6,6 +6,7 @@ import {
 import { enableFormattingPreferences } from './feature-flag'
 import mem from 'mem'
 import QuickLRU from 'quick-lru'
+import { getLocale } from './i18n/language'
 
 // Initializing a date formatter is expensive but formatting is relatively cheap
 // so we cache them based on the locale and their options. The maxSize of a 100
@@ -56,7 +57,7 @@ export function formatDate(
   }
 
   if (!enableFormattingPreferences()) {
-    return getDateFormatter('en-US', { dateStyle, timeStyle }).format(value)
+    return getDateFormatter(getLocale(), { dateStyle, timeStyle }).format(value)
   }
 
   let formatString: string

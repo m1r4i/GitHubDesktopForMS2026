@@ -1,4 +1,4 @@
-import { app, net, WebContents } from 'electron'
+import { app, net, shell, WebContents } from 'electron'
 import { spawn, execFile } from 'child_process'
 import * as Fs from 'fs'
 import * as Os from 'os'
@@ -104,27 +104,40 @@ async function download(
   return { dir, file }
 }
 
-/**
- * Install the downloaded Windows installer once the app has quit. Squirrel
- * updates the existing installation and starts the new version.
- */
-function installWindows(installer: string) {
-  const script =
-    `Wait-Process -Id ${process.pid} -ErrorAction SilentlyContinue; ` +
-    `Start-Process -FilePath '${installer.replace(/'/g, "''")}'`
+/** Start a program which keeps running after the app has quit */
+function startDetached(path: string) {
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn(path, [], { detached: true, stdio: 'ignore' })
+    child.once('error', reject)
+    child.once('spawn', () => {
+      child.unref()
+      resolve()
+    })
+  })
+}
 
-  spawn(
-    'powershell.exe',
-    [
-      '-NoProfile',
-      '-NonInteractive',
-      '-WindowStyle',
-      'Hidden',
-      '-Command',
-      script,
-    ],
-    { detached: true, stdio: 'ignore', windowsHide: true }
-  ).unref()
+/**
+ * Start the downloaded Windows installer. Squirrel installs the new version
+ * next to the running one (so it doesn't need to wait for the app to quit)
+ * and then starts it.
+ */
+async function installWindows(installer: string) {
+  try {
+    await startDetached(installer)
+  } catch (e) {
+    log.warn(`Failed to start ${installer}, opening it instead`, e)
+    // Let Windows start it like when it's double clicked in Explorer
+    const error = await shell.openPath(installer)
+    if (error.length > 0) {
+      throw new Error(
+        `インストーラを起動できませんでした: ${error} (${installer})`
+      )
+    }
+  }
+
+  // The new version is started by the installer while this one quits, it
+  // would otherwise hand over to this instance and exit
+  app.releaseSingleInstanceLock()
 }
 
 /** The .app bundle the app is running from */
@@ -192,7 +205,7 @@ async function install(
   })
 
   if (process.platform === 'win32') {
-    installWindows(file)
+    await installWindows(file)
   } else {
     await installMac(file, dir)
   }

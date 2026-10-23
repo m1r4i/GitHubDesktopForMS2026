@@ -45,6 +45,7 @@ export type MenuEvent =
   | 'find-text'
   | 'create-issue-in-repository-on-github'
   | 'preview-pull-request'
+  | 'show-pull-request-list'
   | 'test-app-error'
   | 'decrease-active-resizable-width'
   | 'increase-active-resizable-width'

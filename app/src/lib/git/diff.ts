@@ -707,6 +707,15 @@ export async function convertDiff(
     }
   }
 
+  // Images tracked by Git LFS show up as a text diff of their pointer files,
+  // render the actual image contents instead
+  if (
+    imageFileExtensions.has(extension) &&
+    diff.contents.includes(lfsPointerVersionPrefix)
+  ) {
+    return getImageDiff(repository, file, newestCommitish, oldestCommitish)
+  }
+
   return {
     kind: DiffType.Text,
     text: diff.contents,
@@ -893,6 +902,46 @@ async function buildDiff(
   )
 }
 
+const lfsPointerVersionPrefix = 'version https://git-lfs.github.com/spec/'
+
+/** Git LFS pointer files are small text files, anything larger isn't one */
+const maxLFSPointerSize = 1024
+
+function isLFSPointer(contents: Buffer) {
+  return (
+    contents.length < maxLFSPointerSize &&
+    contents.toString('utf8').startsWith(lfsPointerVersionPrefix)
+  )
+}
+
+/**
+ * If the given contents are a Git LFS pointer, return the contents of the
+ * object it points to. Otherwise (or if the object can't be retrieved)
+ * the contents are returned as-is.
+ */
+async function resolveLFSPointer(
+  repository: Repository,
+  path: string,
+  contents: Buffer
+): Promise<Buffer> {
+  if (!isLFSPointer(contents)) {
+    return contents
+  }
+
+  try {
+    const { stdout } = await git(
+      ['lfs', 'smudge', '--', path],
+      repository.path,
+      'resolveLFSPointer',
+      { stdin: contents, encoding: 'buffer' }
+    )
+    return stdout.length > 0 ? stdout : contents
+  } catch (e) {
+    log.warn(`Unable to resolve LFS pointer for ${path}`, e)
+    return contents
+  }
+}
+
 /**
  * Retrieve the binary contents of a blob from the object database
  *
@@ -908,7 +957,11 @@ export async function getBlobImage(
   commitish: string
 ): Promise<Image> {
   const extension = Path.extname(path)
-  const contents = await getBlobContents(repository, commitish, path)
+  const contents = await resolveLFSPointer(
+    repository,
+    path,
+    await getBlobContents(repository, commitish, path)
+  )
   return new Image(
     contents.buffer,
     contents.toString('base64'),
@@ -929,7 +982,11 @@ export async function getWorkingDirectoryImage(
   repository: Repository,
   file: FileChange
 ): Promise<Image> {
-  const contents = await readFile(Path.join(repository.path, file.path))
+  const contents = await resolveLFSPointer(
+    repository,
+    file.path,
+    await readFile(Path.join(repository.path, file.path))
+  )
   return new Image(
     contents.buffer,
     contents.toString('base64'),

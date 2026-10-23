@@ -173,19 +173,108 @@ export function onTeamLinksChanged(
   return emitter.on('changed', fn)
 }
 
-/** A greeting which changes with the time of day, shown on the home screen. */
-export function getTeamGreeting(date: Date = new Date()): string {
-  const hour = date.getHours()
+type GreetingTime = 'morning' | 'noon' | 'afternoon' | 'evening' | 'night'
 
+/** Greetings for each time of day, one is picked per day */
+export const teamGreetings: Record<GreetingTime, ReadonlyArray<string>> = {
+  morning: [
+    'おはようございます',
+    'おはようございます。今日も一日よろしくお願いします',
+    'まずはフェッチから始めましょう',
+    'コーヒーの準備はできましたか',
+    '新しい一日、新しいブランチ',
+    '朝の静かなうちに進めましょう',
+  ],
+  noon: [
+    'お昼の時間です',
+    'お昼ごはんはしっかりと',
+    'ひと休みしてから続きをどうぞ',
+    '午前の作業はコミットしましたか',
+    '午後に向けてひと息つきましょう',
+  ],
+  afternoon: [
+    '今日もいいコミットを',
+    '小さなコミットを重ねていきましょう',
+    'プルリクエストのレビューもお忘れなく',
+    'ここからもうひと頑張り',
+    '集中できていますか。水分補給もどうぞ',
+    'コンフリクトは早めに解決しましょう',
+  ],
+  evening: [
+    'おつかれさまです',
+    '今日の作業はプッシュしましたか',
+    '今日もおつかれさまでした',
+    '帰る前にコミットを忘れずに',
+    'いいところで区切りをつけましょう',
+  ],
+  night: [
+    '夜更かしはほどほどに',
+    '遅くまでおつかれさまです',
+    '続きは明日の自分に任せるのもありです',
+    '夜のコミットは見直してからプッシュを',
+    'そろそろ休みませんか',
+  ],
+}
+
+function getGreetingTime(hour: number): GreetingTime {
   if (hour >= 5 && hour < 11) {
-    return 'おはようございます'
+    return 'morning'
   } else if (hour >= 11 && hour < 14) {
-    return 'お昼の時間です'
+    return 'noon'
   } else if (hour >= 14 && hour < 18) {
-    return '今日もいいコミットを'
+    return 'afternoon'
   } else if (hour >= 18 && hour < 22) {
-    return 'おつかれさまです'
-  } else {
-    return '夜更かしはほどほどに'
+    return 'evening'
   }
+  return 'night'
+}
+
+/** Greetings for special days, which take precedence over the usual ones */
+function getSpecialGreeting(date: Date, time: GreetingTime): string | null {
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const weekday = date.getDay()
+
+  if (month === 1 && day <= 3) {
+    return 'あけましておめでとうございます'
+  } else if (month === 12 && day === 31) {
+    return '今年も一年おつかれさまでした'
+  } else if (month === 12 && (day === 24 || day === 25)) {
+    return 'メリークリスマス'
+  } else if (weekday === 0 || weekday === 6) {
+    return time === 'night'
+      ? '休日の夜更かしはほどほどに'
+      : '休日もおつかれさまです'
+  } else if (weekday === 1 && time === 'morning') {
+    return '今週もよろしくお願いします'
+  } else if (weekday === 5 && (time === 'evening' || time === 'night')) {
+    return '今週もおつかれさまでした'
+  }
+
+  return null
+}
+
+/** A number from a string, so that the same day picks the same greeting */
+function hash(text: string) {
+  let h = 0
+  for (let i = 0; i < text.length; i++) {
+    h = (h * 31 + text.charCodeAt(i)) | 0
+  }
+  return Math.abs(h)
+}
+
+/**
+ * A greeting for the time of day, shown on the home screen. It changes from
+ * day to day but stays the same while the app is open during a time of day.
+ */
+export function getTeamGreeting(date: Date = new Date()): string {
+  const time = getGreetingTime(date.getHours())
+  const special = getSpecialGreeting(date, time)
+  if (special !== null) {
+    return special
+  }
+
+  const greetings = teamGreetings[time]
+  const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${time}`
+  return greetings[hash(key) % greetings.length]
 }

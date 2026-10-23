@@ -7,9 +7,18 @@
  * GITHUB_TOKEN / GITEA_TOKEN depending on where releases live).
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import {
+  createReadStream,
+  existsSync,
+  lstatSync,
+  openAsBlob,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from 'fs'
+import * as https from 'https'
 import * as Path from 'path'
-import { getDistArchitecture, getDistRoot } from './dist-info'
+import { getDistArchitecture, getDistRoot, getOSXZipPath } from './dist-info'
 import {
   getReleaseSourceAPIEndpoint,
   isAssetForPlatform,
@@ -19,9 +28,13 @@ import {
 const source = teamReleaseSource
 const api = getReleaseSourceAPIEndpoint(source)
 const repoPath = `repos/${source.owner}/${source.repo}`
+const userAgent = 'MS2026Desktop-publisher'
+
+/** How many times to try uploading before giving up */
+const uploadAttempts = 3
 
 function fail(message: string): never {
-  console.error(message)
+  console.error(`\n${message}`)
   process.exit(1)
 }
 
@@ -50,16 +63,21 @@ function getBuiltVersion() {
   return JSON.parse(readFileSync(pkgPath, 'utf8')).version as string
 }
 
-/** Find the installer (Windows) or archive (macOS) of the last build */
-function findAsset(dir: string): string | null {
-  for (const entry of readdirSync(dir)) {
+/**
+ * Look for the installer (Windows) or archive (macOS) under a directory,
+ * skipping symbolic links and app bundles, which can't contain it.
+ */
+function searchAsset(dir: string): string | null {
+  for (const entry of readdirSync(dir).sort()) {
     const path = Path.join(dir, entry)
-    if (statSync(path).isDirectory()) {
-      const found = findAsset(path)
+    const stat = lstatSync(path)
+    if (stat.isDirectory() && !entry.endsWith('.app')) {
+      const found = searchAsset(path)
       if (found !== null) {
         return found
       }
     } else if (
+      stat.isFile() &&
       isAssetForPlatform(entry, process.platform, getDistArchitecture())
     ) {
       return path
@@ -68,21 +86,31 @@ function findAsset(dir: string): string | null {
   return null
 }
 
+/** The installer (Windows) or archive (macOS) of the last build */
+function findAsset(): string | null {
+  if (process.platform === 'darwin' && existsSync(getOSXZipPath())) {
+    return getOSXZipPath()
+  }
+  return existsSync(getDistRoot()) ? searchAsset(getDistRoot()) : null
+}
+
+/** The name to upload the asset as, GitHub replaces spaces with dots */
+const getAssetName = (file: string) => Path.basename(file).replace(/\s+/g, '-')
+
 async function request(
   method: string,
   url: string,
   token: string,
-  body?: BodyInit,
-  contentType = 'application/json'
+  body?: string | FormData
 ) {
   const response = await fetch(url, {
     method,
     headers: {
       Authorization: `token ${token}`,
       Accept: 'application/json',
-      'User-Agent': 'MS2026Desktop-publisher',
-      ...(body !== undefined && !(body instanceof FormData)
-        ? { 'Content-Type': contentType }
+      'User-Agent': userAgent,
+      ...(typeof body === 'string'
+        ? { 'Content-Type': 'application/json' }
         : {}),
     },
     body,
@@ -117,24 +145,105 @@ async function getOrCreateRelease(tag: string, name: string, token: string) {
   }
 }
 
-async function upload(release: any, file: string, token: string) {
-  const name = Path.basename(file)
-  const data = readFileSync(file)
-
-  if (source.provider === 'github') {
-    const uploadURL = String(release.upload_url).replace(/\{.*\}$/, '')
-    return request(
-      'POST',
-      `${uploadURL}?name=${encodeURIComponent(name)}`,
-      token,
-      data,
-      'application/octet-stream'
-    )
+/**
+ * Remove an asset with the same name, e.g. left behind by an upload which
+ * failed, as uploading again would otherwise fail.
+ */
+async function removeExistingAsset(release: any, name: string, token: string) {
+  const existing = (release.assets ?? []).find(
+    (a: { name: string }) => a.name === name
+  )
+  if (existing === undefined) {
+    return
   }
 
+  console.log(`Removing the existing ${name}…`)
+  const url =
+    source.provider === 'github'
+      ? `${api}/${repoPath}/releases/assets/${existing.id}`
+      : `${api}/${repoPath}/releases/${release.id}/assets/${existing.id}`
+  await request('DELETE', url, token)
+}
+
+const formatMB = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`
+
+/**
+ * Upload a file to GitHub, streaming it from disk and showing the progress.
+ * fetch reads the whole file into memory and gives up on slow uploads.
+ */
+function uploadToGitHub(
+  release: any,
+  file: string,
+  name: string,
+  token: string
+) {
+  const size = statSync(file).size
+  const url = new URL(String(release.upload_url).replace(/\{.*\}$/, ''))
+  url.searchParams.set('name', name)
+
+  return new Promise<void>((resolve, reject) => {
+    const req = https.request(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/json',
+          'User-Agent': userAgent,
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': size,
+        },
+      },
+      res => {
+        let text = ''
+        res.setEncoding('utf8')
+        res.on('data', chunk => (text += chunk))
+        res.on('end', () => {
+          const status = res.statusCode ?? 0
+          if (status >= 200 && status < 300) {
+            resolve()
+          } else {
+            reject(new Error(`Upload failed (${status}): ${text}`))
+          }
+        })
+      }
+    )
+    req.on('error', reject)
+    // Fail instead of hanging forever when the connection stalls
+    req.setTimeout(5 * 60 * 1000, () =>
+      req.destroy(new Error('The upload timed out'))
+    )
+
+    let sent = 0
+    let lastReport = 0
+    const stream = createReadStream(file)
+    stream.on('data', chunk => {
+      sent += chunk.length
+      const now = Date.now()
+      if (now - lastReport > 1000 || sent === size) {
+        lastReport = now
+        process.stdout.write(
+          `\r  ${formatMB(sent)} / ${formatMB(size)} (${Math.round(
+            (sent / size) * 100
+          )}%)`
+        )
+      }
+    })
+    stream.on('end', () => process.stdout.write('\n'))
+    stream.on('error', reject)
+    stream.pipe(req)
+  })
+}
+
+async function uploadToGitea(
+  release: any,
+  file: string,
+  name: string,
+  token: string
+) {
   const form = new FormData()
-  form.append('attachment', new Blob([data]), name)
-  return request(
+  form.append('attachment', await openAsBlob(file), name)
+  await request(
     'POST',
     `${api}/${repoPath}/releases/${release.id}/assets?name=${encodeURIComponent(
       name
@@ -144,18 +253,52 @@ async function upload(release: any, file: string, token: string) {
   )
 }
 
+async function upload(release: any, file: string, token: string) {
+  const name = getAssetName(file)
+
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await removeExistingAsset(
+        // Get the current assets as a failed attempt may have left one behind
+        await request(
+          'GET',
+          `${api}/${repoPath}/releases/${release.id}`,
+          token
+        ),
+        name,
+        token
+      )
+      console.log(`Uploading ${name} (${formatMB(statSync(file).size)})…`)
+      if (source.provider === 'github') {
+        await uploadToGitHub(release, file, name, token)
+      } else {
+        await uploadToGitea(release, file, name, token)
+      }
+      return
+    } catch (e) {
+      if (attempt >= uploadAttempts) {
+        throw e
+      }
+      console.warn(`\n${e}\nTrying again (${attempt + 1}/${uploadAttempts})…`)
+    }
+  }
+}
+
 async function main() {
   const token = getToken()
   const version = getBuiltVersion()
-  const asset = findAsset(getDistRoot())
+  const asset = findAsset()
 
   if (asset === null) {
-    fail(`No build for ${process.platform} found in ${getDistRoot()}`)
+    fail(
+      `No build for ${process.platform} (${getDistArchitecture()}) found in ` +
+        `${getDistRoot()}, run \`yarn build:team\` first.`
+    )
   }
 
   const platform = process.platform === 'darwin' ? 'macOS' : 'Windows'
   const tag = `v${version}`
-  console.log(`Publishing ${Path.basename(asset)} as ${tag}…`)
+  console.log(`Publishing ${asset} as ${tag}…`)
 
   const release = await getOrCreateRelease(
     tag,
@@ -167,4 +310,6 @@ async function main() {
   console.log(`Published ${release.html_url}`)
 }
 
-main().catch(e => fail(`${e}`))
+main().catch(e =>
+  fail(`Publishing failed: ${e instanceof Error ? e.message : e}`)
+)

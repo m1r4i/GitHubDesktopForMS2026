@@ -2,21 +2,68 @@
 // team links editor of the MS2026 build.
 
 dialog.open-pull-request {
+  // The dialog doesn't clip its contents, so everything between the header
+  // and the footer has to shrink to keep the footer inside the window
   .open-pull-request-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing);
+    display: grid;
+    flex: 0 1 auto;
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 260px);
+    gap: var(--spacing) var(--spacing-double);
+    min-height: 0;
+    max-height: 40%;
+    overflow-y: auto;
     padding: var(--spacing) var(--spacing-double);
     border-bottom: var(--base-border);
 
     textarea {
-      min-height: 54px;
+      min-height: 40px;
       resize: vertical;
     }
   }
 
-  .open-pull-request-form + .open-pull-request-content {
-    min-height: calc(100vh - 400px);
+  .open-pull-request-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-half);
+    min-width: 0;
+  }
+
+  .open-pull-request-reviewers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-half);
+    min-width: 0;
+
+    .open-pull-request-label {
+      font-weight: var(--font-weight-semibold);
+    }
+
+    // The label of the picker's select repeats the heading above
+    .reviewer-add label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  }
+
+  .open-pull-request-content {
+    flex: 1 1 0;
+    min-height: 120px;
+    overflow: hidden;
+  }
+
+  .dialog-footer {
+    flex: 0 0 auto;
+  }
+
+  // Too narrow for two columns
+  @media (max-width: 700px) {
+    .open-pull-request-form {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .dialog-footer .button-component .octicon {
@@ -25,7 +72,12 @@ dialog.open-pull-request {
 }
 
 dialog#pull-request-details {
-  width: 560px;
+  width: 640px;
+
+  .dialog-content {
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+  }
 
   .pr-loading {
     color: var(--text-secondary-color);
@@ -238,5 +290,458 @@ dialog#pull-request-details {
     .octicon {
       margin-right: var(--spacing-half);
     }
+  }
+}
+
+// Reviewers of a pull request, in the details and create dialogs
+.reviewer-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-half);
+
+  .reviewer-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .reviewer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 4px 0 10px;
+    border-radius: 999px;
+    background: var(--box-alt-background-color);
+
+    &.state-selected,
+    &.state-requested {
+      padding-right: 2px;
+    }
+
+    &:not(.state-selected):not(.state-requested) {
+      padding-right: 10px;
+    }
+  }
+
+  .reviewer-login {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .reviewer-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary-color);
+
+    .octicon {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  .state-approved .reviewer-state {
+    color: var(--color-new);
+  }
+
+  .state-changes_requested .reviewer-state {
+    color: var(--color-deleted);
+  }
+
+  .state-requested .reviewer-state .octicon,
+  .state-pending .reviewer-state .octicon {
+    color: #bf8700;
+  }
+
+  .reviewer-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary-color);
+
+    &:not([aria-disabled='true']):hover {
+      background: var(--box-hover-background-color);
+    }
+  }
+
+  .reviewer-empty {
+    margin: 0;
+    color: var(--text-secondary-color);
+  }
+
+  .reviewer-add select {
+    max-width: 280px;
+  }
+}
+
+dialog#pull-request-details .pr-reviewers {
+  margin-top: var(--spacing-double);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-half);
+    margin: 0 0 var(--spacing);
+    font-size: var(--font-size);
+  }
+}
+
+// All the pull requests of a repository
+dialog#pull-request-list {
+  width: 640px;
+
+  .pr-list-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing);
+    padding: var(--spacing) var(--spacing-double);
+    border-bottom: var(--base-border);
+
+    .pr-list-search {
+      flex: 1 1 auto;
+    }
+  }
+
+  // A segmented control
+  .pr-list-filters {
+    display: inline-flex;
+    flex: 0 0 auto;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--box-alt-background-color);
+
+    .button-component {
+      height: 24px;
+      padding: 0 12px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      box-shadow: none;
+
+      &.selected {
+        background: var(--background-color);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        font-weight: var(--font-weight-semibold);
+      }
+    }
+  }
+
+  .pr-list-refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    padding: 0;
+  }
+
+  .dialog-content {
+    height: min(480px, calc(100vh - 260px));
+    padding: 0;
+    overflow-y: auto;
+  }
+
+  .pr-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li + li {
+      box-shadow: inset 0 1px 0 var(--box-border-color);
+    }
+  }
+
+  .pr-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing);
+    width: 100%;
+    padding: 10px var(--spacing-double);
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--box-hover-background-color);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--ms-accent);
+      outline-offset: -2px;
+    }
+  }
+
+  .pr-list-icon {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--color-new);
+
+    &.draft {
+      color: var(--text-secondary-color);
+    }
+
+    &.closed {
+      color: var(--color-deleted);
+    }
+
+    &.merged {
+      color: #8250df;
+    }
+  }
+
+  .pr-list-info {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .pr-list-title {
+    overflow: hidden;
+    font-weight: var(--font-weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pr-list-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary-color);
+  }
+
+  .pr-list-branches {
+    font-family: var(--font-family-monospace);
+  }
+
+  .pr-list-reviewers {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 3px;
+    margin-top: 2px;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary-color);
+  }
+
+  .pr-list-empty {
+    padding: var(--spacing-double);
+    color: var(--text-secondary-color);
+    text-align: center;
+  }
+
+  .pr-list-more {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing);
+  }
+
+  .dialog-footer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    .octicon {
+      margin-right: var(--spacing-half);
+    }
+  }
+}
+
+// Sections of the pull request dialog: reviewers, assignees, labels and the
+// conversation
+dialog#pull-request-details {
+  .pr-section {
+    margin-top: var(--spacing-double);
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-half);
+      margin: 0 0 var(--spacing);
+      font-size: var(--font-size);
+    }
+  }
+
+  .pr-side-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-double);
+
+    .pr-section {
+      min-width: 0;
+    }
+  }
+}
+
+.tag-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-half);
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 2px 0 10px;
+    border-radius: 999px;
+    background: var(--box-alt-background-color);
+  }
+
+  .tag-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .tag-label {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .tag-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary-color);
+
+    &:not([aria-disabled='true']):hover {
+      background: var(--box-hover-background-color);
+    }
+  }
+
+  .tag-empty {
+    margin: 0;
+    color: var(--text-secondary-color);
+  }
+
+  .tag-add select {
+    max-width: 100%;
+  }
+}
+
+.pr-conversation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+
+  .conversation-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .conversation-item {
+    padding: var(--spacing);
+    border-radius: 10px;
+    background: var(--box-alt-background-color);
+
+    &.approved {
+      box-shadow: inset 3px 0 0 var(--color-new);
+    }
+
+    &.changes_requested {
+      box-shadow: inset 3px 0 0 var(--color-deleted);
+    }
+  }
+
+  .conversation-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-half);
+    color: var(--text-secondary-color);
+
+    .conversation-login {
+      color: var(--text-color);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .conversation-date {
+      margin-left: auto;
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  .approved .conversation-header .octicon {
+    color: var(--color-new);
+  }
+
+  .changes_requested .conversation-header .octicon {
+    color: var(--color-deleted);
+  }
+
+  .conversation-body {
+    margin-top: var(--spacing-half);
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: text;
+  }
+
+  .conversation-empty {
+    margin: 0;
+    color: var(--text-secondary-color);
+  }
+
+  textarea {
+    min-height: 54px;
+    resize: vertical;
+  }
+
+  .conversation-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-half);
+
+    .octicon {
+      margin-right: var(--spacing-half);
+    }
+  }
+}
+
+dialog#pull-request-list .pr-list-author {
+  flex: 0 0 auto;
+
+  // Visually hidden but still the accessible name of the select
+  label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
