@@ -26,10 +26,42 @@ export function getExecutableName() {
   if (process.platform === 'win32') {
     return `${getWindowsIdentifierName()}${suffix}`
   } else if (process.platform === 'linux') {
-    return 'desktop'
+    return `${getLinuxPackageName()}${suffix}`
   } else {
     return productName
   }
+}
+
+/**
+ * The name of the Linux package, executable and launcher. Distinct from the
+ * community GitHub Desktop packages (`github-desktop`) so that both can be
+ * installed side by side.
+ */
+export function getLinuxPackageName() {
+  return 'ms2026-desktop'
+}
+
+/** The architecture name used by Debian packages */
+export function getDebianArchitecture() {
+  return getDistArchitecture() === 'arm64' ? 'arm64' : 'amd64'
+}
+
+/** The portable archive, e.g. MS2026Desktop-linux-x64.tar.gz */
+export function getLinuxArchiveName() {
+  return `${getWindowsIdentifierName()}-linux-${getDistArchitecture()}.tar.gz`
+}
+
+export function getLinuxArchivePath() {
+  return Path.join(getDistRoot(), getLinuxArchiveName())
+}
+
+/** The Debian package, e.g. MS2026Desktop-linux-amd64.deb */
+export function getDebianPackageName() {
+  return `${getWindowsIdentifierName()}-linux-${getDebianArchitecture()}.deb`
+}
+
+export function getDebianPackagePath() {
+  return Path.join(getDistRoot(), getDebianPackageName())
 }
 
 export function getOSXZipName() {

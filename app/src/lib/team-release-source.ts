@@ -62,13 +62,26 @@ export interface ITeamUpdate {
 }
 
 /**
- * Whether a release asset is the installer (Windows) or archive (macOS) for
- * the given platform and architecture.
+ * The kinds of Linux builds: a portable archive which can update itself, or
+ * a Debian package installed by the package manager.
+ */
+export type LinuxPackageFormat = 'tar.gz' | 'deb'
+
+const debianArchitectures: Record<string, string> = {
+  x64: 'amd64',
+  arm64: 'arm64',
+}
+
+/**
+ * Whether a release asset is the installer (Windows), archive (macOS) or
+ * package (Linux, both formats unless one is given) for the given platform
+ * and architecture.
  */
 export function isAssetForPlatform(
   name: string,
   platform: NodeJS.Platform,
-  arch: string
+  arch: string,
+  linuxFormat?: LinuxPackageFormat
 ) {
   const lower = name.toLowerCase()
   if (platform === 'win32') {
@@ -76,6 +89,15 @@ export function isAssetForPlatform(
   }
   if (platform === 'darwin') {
     return lower.endsWith(`-${arch}.zip`) && lower.includes('desktop')
+  }
+  if (platform === 'linux') {
+    const archive = lower.endsWith(`linux-${arch}.tar.gz`)
+    const deb = lower.endsWith(`linux-${debianArchitectures[arch] ?? arch}.deb`)
+    return linuxFormat === 'tar.gz'
+      ? archive
+      : linuxFormat === 'deb'
+      ? deb
+      : archive || deb
   }
   return false
 }
@@ -95,7 +117,8 @@ export function selectTeamUpdate(
   releases: ReadonlyArray<IAPIRelease>,
   currentVersion: string,
   platform: NodeJS.Platform,
-  arch: string
+  arch: string,
+  linuxFormat?: LinuxPackageFormat
 ): ITeamUpdate | null {
   let best: ITeamUpdate | null = null
 
@@ -114,7 +137,7 @@ export function selectTeamUpdate(
     }
 
     const asset = release.assets.find(a =>
-      isAssetForPlatform(a.name, platform, arch)
+      isAssetForPlatform(a.name, platform, arch, linuxFormat)
     )
     if (asset === undefined) {
       continue

@@ -16,7 +16,7 @@ HAL2026_MS チーム内だけで使う GitHub Desktop のフォークです。
 
 ## ビルド手順
 
-ビルドするマシンで対象 OS が決まります。Mac 版は Mac で、Windows 版は Windows でビルドしてください(クロスビルドはできません)。
+ビルドするマシンで対象 OS が決まります。Mac 版は Mac で、Windows 版は Windows で、Linux 版は Linux でビルドしてください(クロスビルドはできません)。
 
 ```sh
 yarn
@@ -29,6 +29,9 @@ yarn build:team
 
 - **macOS**: `dist/MS2026 Desktop-arm64.zip`(Intel Mac では `-x64`)
 - **Windows**: `dist/` 配下の `MS2026DesktopSetup-x64.exe` と `MS2026DesktopSetup-x64.msi`
+- **Linux**: `dist/MS2026Desktop-linux-x64.tar.gz`(展開して使うポータブル版)と `dist/MS2026Desktop-linux-amd64.deb`(Ubuntu / Debian 用パッケージ。`dpkg-deb` がある環境でのみ作成)。ARM64 では `-arm64` になります
+
+Linux でのビルドには、ネイティブモジュールのコンパイル用に `build-essential`、`python3`、`libsecret-1-dev` が必要です(Ubuntu なら `sudo apt install build-essential python3 libsecret-1-dev`)。
 
 できたファイルは、チームのビルドフォルダ(画面下のバーにある「ビルド」リンク)にアップロードしてください。
 
@@ -50,6 +53,27 @@ xattr -dr com.apple.quarantine "/Applications/MS2026 Desktop.app"
 ### Windows
 
 SmartScreen で「Windows によって PC が保護されました」と表示されたら、「詳細情報」→「実行」を選んでください。
+
+### Linux
+
+**Ubuntu / Debian(.deb)**
+
+```sh
+sudo apt install ./MS2026Desktop-linux-amd64.deb
+```
+
+`/opt/ms2026-desktop` にインストールされ、アプリケーションメニューに「MS2026 Desktop」が追加されます。ターミナルからは `ms2026-desktop` で起動できます。
+
+**その他のディストリビューション(.tar.gz)**
+
+```sh
+tar -xzf MS2026Desktop-linux-x64.tar.gz -C ~/Applications
+~/Applications/MS2026Desktop/install-desktop-entry.sh
+```
+
+`install-desktop-entry.sh` はアプリケーションメニューへの登録(とサインイン用リンクの関連付け)を行います。起動は `MS2026Desktop/ms2026-desktop.sh` から行ってください。サンドボックスを使えない環境(Ubuntu 24.04 以降の展開版など)では自動的に `--no-sandbox` で起動します。
+
+アカウント情報の保存に libsecret(GNOME キーリングや KWallet)を使います。デスクトップ環境には通常入っていますが、ない場合は `libsecret-1-0` をインストールしてください。
 
 ## プルリクエスト
 
@@ -93,6 +117,7 @@ MS2026 Desktop は日本語で表示されます。「設定」→「外観」�
 
 - **Windows**: アプリを終了してから、新しい `MS2026DesktopSetup-x64.exe` を実行するだけです。設定・アカウント・リポジトリはそのまま引き継がれます。更新には `.exe` を使ってください(`.msi` は PC 全体への初回配布用です)。
 - **macOS**: アプリを終了してから、新しい `MS2026 Desktop.app` で「アプリケーション」フォルダの古いものを置き換えてください。
+- **Linux**: `.deb` は `sudo apt install ./MS2026Desktop-linux-amd64.deb` を再度実行します。`.tar.gz` はアプリを終了してから、展開したフォルダを新しいもので置き換えてください。
 
 特定のバージョンを付けたい場合は、`DESKTOP_VERSION_OVERRIDE=3.7.0 yarn build:team` のように指定できます。そのバージョンが、インストール済みのものより新しくなるようにしてください。
 
@@ -102,6 +127,8 @@ MS2026 Desktop は起動の15秒後と、その後3時間ごとに、[m1r4i/GitH
 
 - **Windows**: `MS2026DesktopSetup-<arch>.exe` をダウンロードし、アプリの終了後に実行して上書き更新します。
 - **macOS**: `MS2026 Desktop-<arch>.zip` をダウンロードし、アプリの終了後に `.app` を置き換えて再起動します。
+- **Linux(.tar.gz で展開した場合)**: `MS2026Desktop-linux-<arch>.tar.gz` をダウンロードし、アプリの終了後に展開先のフォルダを置き換えて再起動します。
+- **Linux(.deb でインストールした場合)**: `MS2026Desktop-linux-<arch>.deb` をダウンロードし、パスワードを確認したうえで(`pkexec`)インストールして再起動します。`pkexec` を使えない場合はソフトウェアのインストーラーでパッケージを開きます。
 - リポジトリが非公開の場合は、そのリポジトリを読める GitHub アカウントでサインインしておく必要があります。
 
 ### リリースの公開
@@ -113,8 +140,8 @@ yarn build:team
 MS2026_RELEASE_TOKEN=<トークン> yarn publish:team
 ```
 
-- タグ `v<バージョン>` のリリースを作成し、その OS 向けのファイルをアップロードします。
-- Mac 版と Windows 版は別々のマシンでビルドするため、別々のリリースになりますが、アプリは自分の OS 向けのファイルを含む最新のリリースを選びます。
+- タグ `v<バージョン>` のリリースを作成し、その OS 向けのファイルをアップロードします(Linux は `.tar.gz` と `.deb` の両方)。
+- Mac 版・Windows 版・Linux 版は別々のマシンでビルドするため、別々のリリースになりますが、アプリは自分の OS 向けのファイルを含む最新のリリースを選びます。
 - リリース先は `app/src/lib/team-release-source.ts` で変更できます(Gitea のリポジトリも指定できます)。
 - アップロードは進捗を表示しながら行い、失敗すると 3 回まで自動で再試行します。途中で失敗したときも、もう一度 `yarn publish:team` を実行すれば、残ったファイルを置き換えてやり直します。
 

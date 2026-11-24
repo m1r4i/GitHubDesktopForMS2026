@@ -36,6 +36,30 @@ describe('team releases', () => {
     assert(!isAssetForPlatform(mac, 'linux', 'arm64'))
   })
 
+  it('recognizes the Linux archive and Debian package', () => {
+    const tar = 'MS2026Desktop-linux-x64.tar.gz'
+    const deb = 'MS2026Desktop-linux-amd64.deb'
+    assert(isAssetForPlatform(tar, 'linux', 'x64'))
+    assert(isAssetForPlatform(deb, 'linux', 'x64'))
+    assert(isAssetForPlatform(tar, 'linux', 'x64', 'tar.gz'))
+    assert(!isAssetForPlatform(deb, 'linux', 'x64', 'tar.gz'))
+    assert(isAssetForPlatform(deb, 'linux', 'x64', 'deb'))
+    assert(!isAssetForPlatform(tar, 'linux', 'x64', 'deb'))
+    assert(!isAssetForPlatform(tar, 'linux', 'arm64'))
+    assert(
+      isAssetForPlatform('MS2026Desktop-linux-arm64.deb', 'linux', 'arm64')
+    )
+    assert(!isAssetForPlatform(tar, 'win32', 'x64'))
+
+    // Each installation updates with its own format
+    const releases = [release('v3.6.7-ms00400000', [win, tar, deb])]
+    const current = '3.6.7-ms00380000'
+    const linux = (format: 'tar.gz' | 'deb') =>
+      selectTeamUpdate(releases, current, 'linux', 'x64', format)?.assetName
+    assert.equal(linux('tar.gz'), tar)
+    assert.equal(linux('deb'), deb)
+  })
+
   it('picks the newest release with a build for this platform', () => {
     const releases = [
       release('v3.6.7-ms00400000', [mac]),

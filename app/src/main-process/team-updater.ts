@@ -10,6 +10,7 @@ import {
   getReleasesURL,
   IAPIRelease,
   ITeamUpdate,
+  LinuxPackageFormat,
   selectTeamUpdate,
   teamReleaseSource,
 } from '../lib/team-release-source'
@@ -47,8 +48,27 @@ async function checkForUpdate(token: string | null) {
     releases,
     app.getVersion(),
     process.platform,
-    process.arch
+    process.arch,
+    process.platform === 'linux' ? await getLinuxPackageFormat() : undefined
   )
+}
+
+/** The directory of the Linux app, containing the executable */
+const getLinuxAppDirectory = () => Path.dirname(process.execPath)
+
+/**
+ * How the app was installed on Linux: by the Debian package (in /opt, owned
+ * by root) or by extracting the archive somewhere the user can write to.
+ */
+async function getLinuxPackageFormat(): Promise<LinuxPackageFormat> {
+  const dir = getLinuxAppDirectory()
+  try {
+    await Fs.promises.access(Path.dirname(dir), Fs.constants.W_OK)
+    await Fs.promises.access(dir, Fs.constants.W_OK)
+    return 'tar.gz'
+  } catch {
+    return 'deb'
+  }
 }
 
 /** Download the update, reporting progress between 0 and 1. */
@@ -189,12 +209,83 @@ async function installMac(archive: string, dir: string) {
   spawn('/bin/sh', ['-c', script], { detached: true, stdio: 'ignore' }).unref()
 }
 
+/**
+ * Replace the directory of the app with the one in the downloaded archive
+ * once the app has quit, then start it again.
+ */
+async function installLinuxArchive(archive: string, dir: string) {
+  const extracted = Path.join(dir, 'extracted')
+  await Fs.promises.mkdir(extracted)
+  await execFileAsync('tar', ['-xzf', archive, '-C', extracted])
+
+  const [top] = await Fs.promises.readdir(extracted)
+  if (top === undefined) {
+    throw new Error('ダウンロードしたファイルにアプリが含まれていません。')
+  }
+
+  const current = getLinuxAppDirectory()
+  const next = Path.join(extracted, top)
+  const backup = `${current}.old`
+  const launcher = Path.join(current, 'ms2026-desktop.sh')
+
+  const script = [
+    `while kill -0 ${process.pid} 2>/dev/null; do sleep 0.5; done`,
+    `rm -rf ${shellQuote(backup)}`,
+    `if mv ${shellQuote(current)} ${shellQuote(backup)}; then`,
+    `  if mv ${shellQuote(next)} ${shellQuote(current)}; then`,
+    `    rm -rf ${shellQuote(backup)}`,
+    `  else`,
+    `    mv ${shellQuote(backup)} ${shellQuote(current)}`,
+    `  fi`,
+    `fi`,
+    `rm -rf ${shellQuote(dir)}`,
+    `exec ${shellQuote(launcher)}`,
+  ].join('\n')
+
+  spawn('/bin/sh', ['-c', script], { detached: true, stdio: 'ignore' }).unref()
+}
+
+/**
+ * Install the downloaded Debian package, asking for the password with
+ * pkexec, or open it in the software installer when that isn't possible.
+ *
+ * @returns whether the app should restart
+ */
+async function installDebian(pkg: string) {
+  try {
+    await execFileAsync('pkexec', [
+      'apt-get',
+      'install',
+      '-y',
+      '--allow-downgrades',
+      pkg,
+    ])
+  } catch (e) {
+    log.warn(`Failed to install ${pkg} with pkexec, opening it instead`, e)
+    const error = await shell.openPath(pkg)
+    if (error.length > 0) {
+      throw new Error(
+        `パッケージをインストールできませんでした。${pkg} を手動でインストールしてください。`
+      )
+    }
+    // The software installer takes over, restart once it's done
+    return false
+  }
+
+  app.relaunch()
+  return true
+}
+
 async function install(
   sender: WebContents,
   update: ITeamUpdate,
   token: string | null
 ) {
-  if (process.platform !== 'win32' && process.platform !== 'darwin') {
+  if (
+    process.platform !== 'win32' &&
+    process.platform !== 'darwin' &&
+    process.platform !== 'linux'
+  ) {
     throw new Error('この OS では自動アップデートに対応していません。')
   }
 
@@ -206,8 +297,14 @@ async function install(
 
   if (process.platform === 'win32') {
     await installWindows(file)
-  } else {
+  } else if (process.platform === 'darwin') {
     await installMac(file, dir)
+  } else if (update.assetName.toLowerCase().endsWith('.deb')) {
+    if (!(await installDebian(file))) {
+      return
+    }
+  } else {
+    await installLinuxArchive(file, dir)
   }
 
   log.info(`Installing MS2026 Desktop ${update.version} and restarting`)

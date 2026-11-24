@@ -1,5 +1,5 @@
 /**
- * Publish the last `yarn build:team` build as a release of the team's
+ * Publish the last `yarn build:team` build (Windows, macOS or Linux) as a release of the team's
  * repository (see app/src/lib/team-release-source.ts), from which installed
  * copies of MS2026 Desktop update themselves.
  *
@@ -64,34 +64,52 @@ function getBuiltVersion() {
 }
 
 /**
- * Look for the installer (Windows) or archive (macOS) under a directory,
- * skipping symbolic links and app bundles, which can't contain it.
+ * Look for the installer (Windows), archive (macOS) or packages (Linux)
+ * under a directory, skipping symbolic links and app bundles, which can't
+ * contain them.
  */
-function searchAsset(dir: string): string | null {
+function searchAssets(dir: string): ReadonlyArray<string> {
+  const found = new Array<string>()
   for (const entry of readdirSync(dir).sort()) {
     const path = Path.join(dir, entry)
     const stat = lstatSync(path)
     if (stat.isDirectory() && !entry.endsWith('.app')) {
-      const found = searchAsset(path)
-      if (found !== null) {
-        return found
-      }
+      found.push(...searchAssets(path))
     } else if (
       stat.isFile() &&
       isAssetForPlatform(entry, process.platform, getDistArchitecture())
     ) {
-      return path
+      found.push(path)
     }
   }
-  return null
+  return found
 }
 
-/** The installer (Windows) or archive (macOS) of the last build */
-function findAsset(): string | null {
+/**
+ * The installer (Windows), archive (macOS) or archive and Debian package
+ * (Linux) of the last build
+ */
+function findAssets(): ReadonlyArray<string> {
   if (process.platform === 'darwin' && existsSync(getOSXZipPath())) {
-    return getOSXZipPath()
+    return [getOSXZipPath()]
   }
-  return existsSync(getDistRoot()) ? searchAsset(getDistRoot()) : null
+  if (!existsSync(getDistRoot())) {
+    return []
+  }
+  const assets = searchAssets(getDistRoot())
+  // Only one installer on Windows, the first one found as before
+  return process.platform === 'win32' ? assets.slice(0, 1) : assets
+}
+
+function getPlatformName() {
+  switch (process.platform) {
+    case 'darwin':
+      return 'macOS'
+    case 'win32':
+      return 'Windows'
+    default:
+      return 'Linux'
+  }
 }
 
 /** The name to upload the asset as, GitHub replaces spaces with dots */
@@ -287,25 +305,27 @@ async function upload(release: any, file: string, token: string) {
 async function main() {
   const token = getToken()
   const version = getBuiltVersion()
-  const asset = findAsset()
+  const assets = findAssets()
 
-  if (asset === null) {
+  if (assets.length === 0) {
     fail(
       `No build for ${process.platform} (${getDistArchitecture()}) found in ` +
         `${getDistRoot()}, run \`yarn build:team\` first.`
     )
   }
 
-  const platform = process.platform === 'darwin' ? 'macOS' : 'Windows'
+  const platform = getPlatformName()
   const tag = `v${version}`
-  console.log(`Publishing ${asset} as ${tag}…`)
+  console.log(`Publishing ${assets.join(', ')} as ${tag}…`)
 
   const release = await getOrCreateRelease(
     tag,
     `MS2026 Desktop ${version} (${platform})`,
     token
   )
-  await upload(release, asset, token)
+  for (const asset of assets) {
+    await upload(release, asset, token)
+  }
 
   console.log(`Published ${release.html_url}`)
 }
